@@ -9,3 +9,4 @@ __pycache__/
 staticfiles/
 media/
 gp_pgdata/
+db_data/
