@@ -1,0 +1,153 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Receptionist Portal</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><span class="dot"></span> Receptionist Portal <span id="whoami" class="role-pill"></span></div>
+      <div class="actions">
+        <button id="btnSwitch" class="btn secondary">Switch user</button>
+        <button id="btnLogout" class="btn danger">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"><span class="tag">OK</span><span class="msg"></span></div>
+
+  <div class="container">
+    <div class="grid two">
+      <div class="card">
+        <div class="card-h">
+          <h3>Appointments</h3>
+          <div class="actions">
+            <button id="btnList" class="btn secondary">Refresh</button>
+          </div>
+        </div>
+        <div class="card-b">
+          <div class="row">
+            <div class="field">
+              <label>Upcoming only</label>
+              <select id="upcoming">
+                <option value="">No filter</option>
+                <option value="true">Upcoming</option>
+                <option value="false">Past</option>
+              </select>
+            </div>
+            <div class="field" style="min-width:160px; flex:0;">
+              <button id="btnLoad" class="btn">Load</button>
+            </div>
+          </div>
+
+          <div style="margin-top:12px" id="apptTable"></div>
+
+          <details class="raw" id="apptRaw">
+            <summary>Show raw JSON (debug)</summary>
+            <pre></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h">
+          <h3>Reschedule appointment</h3>
+          <span class="pill">PATCH</span>
+        </div>
+        <div class="card-b">
+          <div class="row">
+            <div class="field">
+              <label>Appointment id</label>
+              <input id="apptId" type="number" placeholder="e.g. 28" />
+            </div>
+            <div class="field">
+              <label>New start time (ISO)</label>
+              <input id="start" placeholder="YYYY-MM-DDTHH:MM:SSZ" />
+            </div>
+            <div class="field">
+              <label>New end time (ISO)</label>
+              <input id="end" placeholder="YYYY-MM-DDTHH:MM:SSZ" />
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <button id="btnResched" class="btn ok">Reschedule</button>
+          </div>
+
+          <div id="resMessage" class="pill" style="margin-top:10px;">No changes yet.</div>
+
+          <details class="raw" id="resRaw">
+            <summary>Show raw JSON (debug)</summary>
+            <pre></pre>
+          </details>
+
+          <div class="note" style="margin-top:10px;">
+            Tip: You can copy an appointment ID from the appointments table.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="api.js"></script>
+  <script src="common.js"></script>
+  <script>
+    let me = null;
+
+    async function loadAppointments(){
+      try{
+        const up = $("upcoming").value;
+        const qs = up ? `?upcoming=${encodeURIComponent(up)}` : "";
+        const data = await apiFetch(`/api/appointments/${qs}`);
+
+        renderAppointmentsTable("apptTable", data, { showPatient:true, showGp:true });
+        setRawJson("apptRaw", data);
+
+        showToast("Appointments loaded.", "ok");
+      }catch(e){
+        showToast(e.message, "err");
+        $("apptTable").innerHTML = `<span class="pill">Failed to load appointments.</span>`;
+      }
+    }
+
+    async function reschedule(){
+      try{
+        const id = $("apptId").value.trim();
+        const body = {
+          start_time: $("start").value.trim(),
+          end_time: $("end").value.trim()
+        };
+        if (!id || !body.start_time || !body.end_time) {
+          showToast("Enter appointment id, start time and end time.", "warn");
+          return;
+        }
+
+        const data = await apiFetch(`/api/appointments/${encodeURIComponent(id)}/`, { method:"PATCH", body });
+        $("resMessage").textContent = `Rescheduled #${data.id}: ${fmtDate(data.start_time)} → ${fmtDate(data.end_time)}`;
+        setRawJson("resRaw", data);
+
+        showToast("Rescheduled.", "ok");
+        await loadAppointments();
+      }catch(e){
+        showToast(e.message, "err");
+        $("resMessage").textContent = "Reschedule failed.";
+      }
+    }
+
+    (async () => {
+      me = await requireAuth(["RECEPTIONIST", "PRACTICE_MANAGER"]); // staff can access
+      if (!me) return;
+      mountTopbar(me);
+
+      $("btnList").onclick = loadAppointments;
+      $("btnLoad").onclick = loadAppointments;
+      $("btnResched").onclick = reschedule;
+
+      await loadAppointments();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:16
+    container_name: gp_db
+    environment:
+      POSTGRES_DB: gpdb
+      POSTGRES_USER: gpuser
+      POSTGRES_PASSWORD: gppassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gpuser -d gpdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: ./backend
+    container_name: gp_web
+    command: "sh -c 'python manage.py migrate && echo && echo \"OPEN IN BROWSER: http://localhost:8000/\" && echo && python manage.py runserver 0.0.0.0:8000'"
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  gp_pgdata:

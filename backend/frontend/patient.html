@@ -1,0 +1,284 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Patient Portal</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><span class="dot"></span> Patient Portal <span id="whoami" class="role-pill"></span></div>
+      <div class="actions">
+        <button id="btnSwitch" class="btn secondary">Switch user</button>
+        <button id="btnLogout" class="btn danger">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"><span class="tag">OK</span><span class="msg"></span></div>
+
+  <div class="container">
+    <div class="grid two">
+      <div class="card">
+        <div class="card-h">
+          <h3>Find availability</h3>
+          <span class="pill">15-min slots</span>
+        </div>
+        <div class="card-b">
+          <div class="row">
+            <div class="field">
+              <label>Date</label>
+              <input id="avDate" type="date" />
+            </div>
+            <div class="field">
+              <label>GP user id</label>
+              <input id="avGp" type="number" placeholder="e.g. 5" />
+            </div>
+            <div class="field" style="min-width:160px; flex:0;">
+              <button id="btnAvail" class="btn">Search slots</button>
+            </div>
+          </div>
+
+          <div style="margin-top:12px" id="avTable"></div>
+
+          <details class="raw" id="avRaw">
+            <summary>Show raw JSON (debug)</summary>
+            <pre></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h">
+          <h3>Book appointment</h3>
+          <span class="pill">Patient request</span>
+        </div>
+        <div class="card-b">
+          <div class="row">
+            <div class="field">
+              <label>Patient id (auto)</label>
+              <input id="patientId" type="number" />
+            </div>
+            <div class="field">
+              <label>GP id</label>
+              <input id="gpId" type="number" placeholder="e.g. 5" />
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <div class="field">
+              <label>Start time (ISO)</label>
+              <input id="startIso" placeholder="YYYY-MM-DDTHH:MM:SSZ" />
+            </div>
+            <div class="field">
+              <label>End time (ISO)</label>
+              <input id="endIso" placeholder="YYYY-MM-DDTHH:MM:SSZ" />
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <div class="field">
+              <label>Reason (optional)</label>
+              <input id="reason" placeholder="e.g. headache for 3 days" />
+            </div>
+            <div class="field" style="min-width:160px; flex:0;">
+              <button id="btnBook" class="btn ok">Book</button>
+            </div>
+          </div>
+
+          <div class="note" style="margin-top:10px;">
+            Use <b>Select</b> on a slot to auto-fill start/end. If your backend auto-assigns GP from profile,
+            including GP here won’t hurt.
+          </div>
+
+          <details class="raw" id="bookRaw">
+            <summary>Show last booking response (debug)</summary>
+            <pre></pre>
+          </details>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid two" style="margin-top:14px;">
+      <div class="card">
+        <div class="card-h">
+          <h3>My appointments</h3>
+          <div class="actions">
+            <button id="btnMyAppts" class="btn secondary">Refresh</button>
+          </div>
+        </div>
+        <div class="card-b">
+          <div id="myApptTable"></div>
+
+          <details class="raw" id="myApptRaw">
+            <summary>Show raw JSON (debug)</summary>
+            <pre></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h">
+          <h3>My medical record</h3>
+          <div class="actions">
+            <button id="btnMyRecord" class="btn secondary">Refresh</button>
+          </div>
+        </div>
+        <div class="card-b">
+          <div id="recordInfo"></div>
+          <hr class="sep" />
+          <div class="muted" style="margin-bottom:8px;">Record entries</div>
+          <div id="entryTable"></div>
+
+          <details class="raw" id="recordRaw">
+            <summary>Show raw JSON (debug)</summary>
+            <pre></pre>
+          </details>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="api.js"></script>
+  <script src="common.js"></script>
+  <script>
+    let me = null;
+
+    function todayStr(){
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth()+1).padStart(2,"0");
+      const dd = String(d.getDate()).padStart(2,"0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    async function loadMyAppointments(){
+      try{
+        const data = await apiFetch("/api/appointments/");
+        renderAppointmentsTable("myApptTable", data, {
+          showGp: true,
+          actions: (a) => {
+            const canCancel = String(a.status).toUpperCase() !== "COMPLETED";
+            return `
+              <div class="actions-inline">
+                <button class="btn danger" data-cancel="${a.id}" ${canCancel ? "" : "disabled"}>Cancel</button>
+              </div>
+            `;
+          }
+        });
+        setRawJson("myApptRaw", data);
+
+        document.querySelectorAll("button[data-cancel]").forEach(btn => {
+          btn.onclick = async () => {
+            const id = btn.getAttribute("data-cancel");
+            try{
+              const res = await apiFetch(`/api/appointments/${id}/`, { method:"PATCH", body:{ status:"CANCELLED" }});
+              showToast(`Cancelled appointment #${id}.`, "ok");
+              await loadMyAppointments();
+            }catch(e){
+              showToast(e.message, "err");
+            }
+          };
+        });
+      }catch(e){
+        showToast(e.message, "err");
+        $("myApptTable").innerHTML = `<span class="pill">Failed to load appointments.</span>`;
+      }
+    }
+
+    async function loadMyRecord(){
+      try{
+        const rec = await apiFetch("/api/records/me/");
+        setRawJson("recordRaw", rec);
+
+        // rec might be a single record object or list; normalize
+        const recordObj = Array.isArray(rec) ? rec[0] : rec;
+        if (!recordObj || !recordObj.id){
+          $("recordInfo").innerHTML = `<span class="pill">No record found.</span>`;
+          $("entryTable").innerHTML = "";
+          return;
+        }
+
+        renderKeyValue("recordInfo", recordObj);
+
+        const entries = await apiFetch(`/api/records/${recordObj.id}/entries/`);
+        renderEntriesTable("entryTable", entries);
+      }catch(e){
+        showToast(e.message, "err");
+        $("recordInfo").innerHTML = `<span class="pill">Failed to load record.</span>`;
+        $("entryTable").innerHTML = "";
+      }
+    }
+
+    (async () => {
+      me = await requireAuth(["PATIENT"]);
+      if (!me) return;
+      mountTopbar(me);
+
+      $("patientId").value = me.id ?? "";
+      $("avDate").value = todayStr();
+
+      // If you usually use GP id 5, keep it as a friendly default
+      $("avGp").value = localStorage.getItem("patient_gp_hint") || "5";
+      $("gpId").value = $("avGp").value;
+
+      $("btnAvail").onclick = async () => {
+        try{
+          const date = $("avDate").value;
+          const gp = $("avGp").value.trim();
+          if (!date || !gp){
+            showToast("Choose a date and GP id.", "warn");
+            return;
+          }
+          localStorage.setItem("patient_gp_hint", gp);
+
+          const data = await apiFetch(`/api/appointments/availability/?date=${encodeURIComponent(date)}&gp=${encodeURIComponent(gp)}`);
+          renderAvailability("avTable", data, (slot) => {
+            $("startIso").value = slot.start_time;
+            $("endIso").value = slot.end_time;
+            $("gpId").value = gp;
+            showToast("Slot selected — booking form filled.", "ok");
+          });
+          setRawJson("avRaw", data);
+        }catch(e){
+          showToast(e.message, "err");
+          $("avTable").innerHTML = `<span class="pill">No availability.</span>`;
+        }
+      };
+
+      $("btnBook").onclick = async () => {
+        try{
+          const body = {
+            patient: Number($("patientId").value || me.id),
+            gp: Number($("gpId").value || 0),
+            start_time: $("startIso").value.trim(),
+            end_time: $("endIso").value.trim(),
+            status: "REQUESTED",
+            reason: $("reason").value.trim()
+          };
+
+          if (!body.start_time || !body.end_time){
+            showToast("Pick a slot first (start/end).", "warn");
+            return;
+          }
+
+          const data = await apiFetch("/api/appointments/", { method:"POST", body });
+          setRawJson("bookRaw", data);
+          showToast(`Booked appointment #${data.id}.`, "ok");
+          await loadMyAppointments();
+        }catch(e){
+          showToast(e.message, "err");
+        }
+      };
+
+      $("btnMyAppts").onclick = loadMyAppointments;
+      $("btnMyRecord").onclick = loadMyRecord;
+
+      await loadMyAppointments();
+      await loadMyRecord();
+    })();
+  </script>
+</body>
+</html>

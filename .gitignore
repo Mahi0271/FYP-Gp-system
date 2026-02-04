@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+*.sqlite3
+.vscode/
+
+staticfiles/
+media/
+gp_pgdata/

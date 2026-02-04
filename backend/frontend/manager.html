@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Manager Portal</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><span class="dot"></span> Manager Portal <span id="whoami" class="role-pill"></span></div>
+      <div class="actions">
+        <button id="btnSwitch" class="btn secondary">Switch user</button>
+        <button id="btnLogout" class="btn danger">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"><span class="tag">OK</span><span class="msg"></span></div>
+
+  <div class="container">
+    <div class="card">
+      <div class="card-h">
+        <h3>Audit logs</h3>
+        <div class="actions">
+          <button id="btnSearch" class="btn">Search</button>
+          <button id="btnClear" class="btn secondary">Clear filters</button>
+        </div>
+      </div>
+
+      <div class="card-b">
+        <div class="grid three">
+          <div class="field">
+            <label>Action</label>
+            <input id="action" placeholder="e.g. APPOINTMENT_CREATE" />
+          </div>
+          <div class="field">
+            <label>Object type</label>
+            <input id="objectType" placeholder="e.g. appointment, clinical_entry" />
+          </div>
+          <div class="field">
+            <label>User id</label>
+            <input id="userId" type="number" placeholder="e.g. 5" />
+          </div>
+        </div>
+
+        <div class="grid two" style="margin-top:10px;">
+          <div class="field">
+            <label>Date from</label>
+            <input id="dateFrom" type="date" />
+          </div>
+          <div class="field">
+            <label>Date to</label>
+            <input id="dateTo" type="date" />
+          </div>
+        </div>
+
+        <hr class="sep" />
+
+        <div id="auditTable"></div>
+
+        <details class="raw" id="auditRaw">
+          <summary>Show raw JSON (debug)</summary>
+          <pre></pre>
+        </details>
+
+        <div class="note" style="margin-top:10px;">
+          Filters are optional. Leave blank to see all logs (manager-only).
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="api.js"></script>
+  <script src="common.js"></script>
+  <script>
+    let me = null;
+
+    function qsFromFilters(){
+      const p = new URLSearchParams();
+      const action = $("action").value.trim();
+      const object_type = $("objectType").value.trim();
+      const user = $("userId").value.trim();
+      const date_from = $("dateFrom").value;
+      const date_to = $("dateTo").value;
+
+      if (action) p.set("action", action);
+      if (object_type) p.set("object_type", object_type);
+      if (user) p.set("user", user);
+      if (date_from) p.set("date_from", date_from);
+      if (date_to) p.set("date_to", date_to);
+
+      const s = p.toString();
+      return s ? `?${s}` : "";
+    }
+
+    async function loadAudits(){
+      try{
+        const data = await apiFetch(`/api/audits/${qsFromFilters()}`);
+        renderAuditTable("auditTable", data);
+        setRawJson("auditRaw", data);
+        showToast("Audit logs loaded.", "ok");
+      }catch(e){
+        showToast(e.message, "err");
+        $("auditTable").innerHTML = `<span class="pill">Failed to load audit logs.</span>`;
+      }
+    }
+
+    function clearFilters(){
+      $("action").value = "";
+      $("objectType").value = "";
+      $("userId").value = "";
+      $("dateFrom").value = "";
+      $("dateTo").value = "";
+      showToast("Filters cleared.", "ok");
+    }
+
+    (async () => {
+      me = await requireAuth(["PRACTICE_MANAGER"]);
+      if (!me) return;
+      mountTopbar(me);
+
+      $("btnSearch").onclick = loadAudits;
+      $("btnClear").onclick = clearFilters;
+
+      await loadAudits();
+    })();
+  </script>
+</body>
+</html>

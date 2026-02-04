@@ -1,0 +1,272 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GP Portal</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><span class="dot"></span> GP Portal <span id="whoami" class="role-pill"></span></div>
+      <div class="actions">
+        <button id="btnSwitch" class="btn secondary">Switch user</button>
+        <button id="btnLogout" class="btn danger">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"><span class="tag">OK</span><span class="msg"></span></div>
+
+  <div class="container">
+    <div class="grid two">
+      <div class="card">
+        <div class="card-h">
+          <h3>My appointments</h3>
+          <div class="actions">
+            <button id="btnAppts" class="btn secondary">Refresh</button>
+          </div>
+        </div>
+        <div class="card-b">
+          <div id="apptTable"></div>
+
+          <details class="raw" id="apptRaw">
+            <summary>Show raw JSON (debug)</summary>
+            <pre></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h">
+          <h3>Assigned patient records</h3>
+          <div class="actions">
+            <button id="btnRecords" class="btn secondary">Refresh</button>
+          </div>
+        </div>
+        <div class="card-b">
+          <div id="recordTable"></div>
+
+          <details class="raw" id="recordRaw">
+            <summary>Show raw JSON (debug)</summary>
+            <pre></pre>
+          </details>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid two" style="margin-top:14px;">
+      <div class="card">
+        <div class="card-h">
+          <h3>Record entries</h3>
+          <span class="pill">View</span>
+        </div>
+        <div class="card-b">
+          <div class="row">
+            <div class="field">
+              <label>Record id</label>
+              <input id="recordId" type="number" placeholder="select from records table" />
+            </div>
+            <div class="field" style="min-width:160px; flex:0;">
+              <button id="btnLoadEntries" class="btn">Load entries</button>
+            </div>
+          </div>
+
+          <div style="margin-top:12px" id="entriesTable"></div>
+
+          <details class="raw" id="entriesRaw">
+            <summary>Show raw JSON (debug)</summary>
+            <pre></pre>
+          </details>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h">
+          <h3>Add clinical entry</h3>
+          <span class="pill">Create</span>
+        </div>
+        <div class="card-b">
+          <div class="row">
+            <div class="field">
+              <label>Record id</label>
+              <input id="addRecordId" type="number" />
+            </div>
+            <div class="field">
+              <label>Type</label>
+              <select id="entryType">
+                <option value="NOTE">NOTE</option>
+                <option value="DIAGNOSIS">DIAGNOSIS</option>
+                <option value="PRESCRIPTION">PRESCRIPTION</option>
+                <option value="TEST_RESULT">TEST_RESULT</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <div class="field">
+              <label>Title</label>
+              <input id="entryTitle" placeholder="e.g. Follow-up notes" />
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <div class="field">
+              <label>Content</label>
+              <textarea id="entryContent" placeholder="Write the clinical entry..."></textarea>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <button id="btnAddEntry" class="btn ok">Add entry</button>
+          </div>
+
+          <details class="raw" id="addEntryRaw">
+            <summary>Show last create response (debug)</summary>
+            <pre></pre>
+          </details>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="api.js"></script>
+  <script src="common.js"></script>
+  <script>
+    let me = null;
+
+    async function loadAppointments(){
+      try{
+        const data = await apiFetch("/api/appointments/");
+        renderAppointmentsTable("apptTable", data, {
+          showPatient: true,
+          actions: (a) => {
+            const s = String(a.status || "").toUpperCase();
+            const canComplete = s !== "COMPLETED" && s !== "CANCELLED";
+            return `
+              <div class="actions-inline">
+                <button class="btn ok" data-complete="${a.id}" ${canComplete ? "" : "disabled"}>Mark completed</button>
+              </div>
+            `;
+          }
+        });
+        setRawJson("apptRaw", data);
+
+        document.querySelectorAll("button[data-complete]").forEach(btn => {
+          btn.onclick = async () => {
+            const id = btn.getAttribute("data-complete");
+            try{
+              await apiFetch(`/api/appointments/${id}/`, { method:"PATCH", body:{ status:"COMPLETED" }});
+              showToast(`Appointment #${id} marked completed.`, "ok");
+              await loadAppointments();
+            }catch(e){
+              showToast(e.message, "err");
+            }
+          };
+        });
+      }catch(e){
+        showToast(e.message, "err");
+        $("apptTable").innerHTML = `<span class="pill">Failed to load appointments.</span>`;
+      }
+    }
+
+    async function loadRecords(){
+      try{
+        const data = await apiFetch("/api/records/");
+        setRawJson("recordRaw", data);
+
+        if (!Array.isArray(data) || data.length === 0){
+          $("recordTable").innerHTML = `<span class="pill">No records assigned.</span>`;
+          return;
+        }
+
+        const rows = data.map(r => `
+          <tr>
+            <td>${r.id}</td>
+            <td>${escapeHtml(r.patient_username || r.patient || "")}</td>
+            <td>${fmtDate(r.created_at)}</td>
+            <td>
+              <div class="actions-inline">
+                <button class="btn" data-open="${r.id}">Open</button>
+              </div>
+            </td>
+          </tr>
+        `).join("");
+
+        $("recordTable").innerHTML = `
+          <table>
+            <thead><tr><th>ID</th><th>Patient</th><th>Created</th><th></th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+
+        document.querySelectorAll("button[data-open]").forEach(btn => {
+          btn.onclick = () => {
+            const rid = btn.getAttribute("data-open");
+            $("recordId").value = rid;
+            $("addRecordId").value = rid;
+            showToast(`Record #${rid} selected.`, "ok");
+          };
+        });
+
+      }catch(e){
+        showToast(e.message, "err");
+        $("recordTable").innerHTML = `<span class="pill">Failed to load records.</span>`;
+      }
+    }
+
+    async function loadEntries(){
+      try{
+        const rid = $("recordId").value.trim();
+        if (!rid) { showToast("Enter a record id.", "warn"); return; }
+        const data = await apiFetch(`/api/records/${encodeURIComponent(rid)}/entries/`);
+        renderEntriesTable("entriesTable", data);
+        setRawJson("entriesRaw", data);
+        showToast("Entries loaded.", "ok");
+      }catch(e){
+        showToast(e.message, "err");
+        $("entriesTable").innerHTML = `<span class="pill">Failed to load entries.</span>`;
+      }
+    }
+
+    async function addEntry(){
+      try{
+        const rid = $("addRecordId").value.trim();
+        if (!rid) { showToast("Enter a record id.", "warn"); return; }
+
+        const body = {
+          type: $("entryType").value,
+          title: $("entryTitle").value.trim(),
+          content: $("entryContent").value.trim()
+        };
+
+        const data = await apiFetch(`/api/records/${encodeURIComponent(rid)}/entries/`, { method:"POST", body });
+        setRawJson("addEntryRaw", data);
+        showToast("Entry added.", "ok");
+
+        // refresh entries view
+        $("recordId").value = rid;
+        await loadEntries();
+
+      }catch(e){
+        showToast(e.message, "err");
+      }
+    }
+
+    (async () => {
+      me = await requireAuth(["GP"]);
+      if (!me) return;
+      mountTopbar(me);
+
+      $("btnAppts").onclick = loadAppointments;
+      $("btnRecords").onclick = loadRecords;
+      $("btnLoadEntries").onclick = loadEntries;
+      $("btnAddEntry").onclick = addEntry;
+
+      await loadAppointments();
+      await loadRecords();
+    })();
+  </script>
+</body>
+</html>

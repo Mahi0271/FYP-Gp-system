@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GP Secure System — Login</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><span class="dot"></span> GP Secure System</div>
+      <div class="actions">
+        <span class="pill">Prototype UI</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"><span class="tag">OK</span><span class="msg"></span></div>
+
+  <div class="center">
+    <div class="login card">
+      <div class="card-h">
+        <h3>Sign in</h3>
+        <span class="pill">JWT</span>
+      </div>
+      <div class="card-b">
+        <h1>Welcome back</h1>
+        <p class="sub">
+          Use your role account to demo permissions and workflows (appointments, records, audits).
+        </p>
+
+        <div class="row">
+          <div class="field">
+            <label>Username</label>
+            <input id="username" placeholder="e.g. patient1" autocomplete="username" />
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
+          </div>
+        </div>
+
+        <div style="margin-top:12px" class="row">
+          <button id="btnLogin" class="btn">Sign in</button>
+          <button id="btnFillPatient" class="btn secondary">Fill patient demo</button>
+          <button id="btnFillGp" class="btn secondary">Fill GP demo</button>
+          <button id="btnFillReception" class="btn secondary">Fill receptionist demo</button>
+          <button id="btnFillManager" class="btn secondary">Fill manager demo</button>
+        </div>
+
+        <hr class="sep" />
+
+        
+      </div>
+    </div>
+  </div>
+
+  <script src="api.js"></script>
+  <script src="common.js"></script>
+  <script>
+    // If already logged in, redirect
+    (async () => {
+      const token = getToken();
+      if (token) {
+        try {
+          const me = await fetchMe();
+          go(roleHome(me.role));
+        } catch (e) {
+          clearToken();
+        }
+      }
+    })();
+
+    $("btnFillPatient").onclick = () => { $("username").value="patient1"; $("password").value="clothes9"; };
+    $("btnFillGp").onclick = () => { $("username").value="gp1"; $("password").value="clothes9"; };
+    $("btnFillReception").onclick = () => { $("username").value="reception1"; $("password").value="clothes9"; };
+    $("btnFillManager").onclick = () => { $("username").value="manager1"; $("password").value="clothes9"; };
+
+    $("btnLogin").onclick = async () => {
+      try {
+        const username = $("username").value.trim();
+        const password = $("password").value;
+
+        if (!username || !password) {
+          showToast("Enter username and password.", "warn");
+          return;
+        }
+
+        const tok = await apiFetch("/api/token/", { method: "POST", body: { username, password } });
+        setToken(tok.access);
+
+        const me = await fetchMe();
+        showToast(`Signed in as ${me.username} (${me.role}).`, "ok");
+        go(roleHome(me.role));
+      } catch (e) {
+        showToast(e.message, "err");
+      }
+    };
+  </script>
+</body>
+</html>
