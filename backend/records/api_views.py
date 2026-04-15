@@ -3,7 +3,8 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied, NotFound
 from audits.utils import log_event
-
+from django.conf import settings
+from django.db.models.expressions import RawSQL
 
 
 from accounts.models import User
@@ -88,7 +89,15 @@ class RecordEntriesListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         record = self.get_record()
-        return ClinicalEntry.objects.filter(record=record).select_related("created_by")
+
+        qs = ClinicalEntry.objects.filter(record=record).select_related("created_by")
+        qs = qs.annotate(
+            content_plain=RawSQL(
+                "pgp_sym_decrypt(content_enc, %s)::text",
+                (settings.PGCRYPTO_KEY,),
+            )
+        )
+        return qs
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
@@ -113,7 +122,14 @@ class RecordEntriesListCreateView(generics.ListCreateAPIView):
 
 class ClinicalEntryDetailView(generics.RetrieveUpdateAPIView):
     serializer_class = ClinicalEntrySerializer
-    queryset = ClinicalEntry.objects.select_related("record", "record__patient", "created_by")
+    queryset = ClinicalEntry.objects.select_related(
+        "record", "record__patient", "created_by"
+    ).annotate(
+        content_plain=RawSQL(
+            "pgp_sym_decrypt(content_enc, %s)::text",
+            (settings.PGCRYPTO_KEY,),
+        )
+    )
 
     def get_object(self):
         entry = super().get_object()

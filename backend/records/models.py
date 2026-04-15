@@ -28,7 +28,8 @@ class ClinicalEntry(models.Model):
     )
     type = models.CharField(max_length=32, choices=EntryType.choices)
     title = models.CharField(max_length=255, blank=True, default="")
-    content = models.TextField()
+    content = models.TextField(blank=True, default="")  
+    content_enc = models.BinaryField(null=True, blank=True, editable=False)  
 
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from accounts.models import User
 from .models import MedicalRecord, ClinicalEntry
+from django.conf import settings
+from django.db import connection
 
 
 def gp_is_assigned_to_patient(gp_user: User, patient_user: User) -> bool:
@@ -27,6 +29,9 @@ class ClinicalEntrySerializer(serializers.ModelSerializer):
     created_by_id = serializers.IntegerField(source="created_by.id", read_only=True)
     created_by_username = serializers.CharField(source="created_by.username", read_only=True)
 
+    # populated by api_views.py annotate(content_plain=...)
+    content_plain = serializers.CharField(read_only=True)
+
     class Meta:
         model = ClinicalEntry
         fields = [
@@ -34,13 +39,42 @@ class ClinicalEntrySerializer(serializers.ModelSerializer):
             "record",
             "type",
             "title",
-            "content",
+            "content",        # write input
+            "content_plain",  # read output (decrypted)
             "created_by_id",
             "created_by_username",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["record", "created_by_id", "created_by_username", "created_at", "updated_at"]
+
+    def to_representation(self, instance):
+        """
+        Return decrypted content as 'content' so the API stays the same.
+        """
+        data = super().to_representation(instance)
+        data["content"] = data.get("content_plain") or ""
+        data.pop("content_plain", None)
+        return data
+
+    def _encrypt_content(self, entry_id: int, plaintext: str) -> None:
+        """
+        Store encrypted content in content_enc (bytea) using pgcrypto,
+        and clear plaintext content column.
+
+        IMPORTANT: explicit casts avoid pgcrypto "unknown, unknown" signature errors,
+        especially in tests.
+        """
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE records_clinicalentry
+                SET content_enc = pgp_sym_encrypt(%s::text, %s::text),
+                    content = ''
+                WHERE id = %s
+                """,
+                [plaintext, settings.PGCRYPTO_KEY, entry_id],
+            )
 
     def validate(self, attrs):
         request = self.context.get("request")
@@ -68,8 +102,33 @@ class ClinicalEntrySerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         request = self.context["request"]
         record: MedicalRecord = self.context["record"]
-        return ClinicalEntry.objects.create(
+
+        # take plaintext from request but DO NOT store it in DB plaintext column
+        plaintext = validated_data.pop("content", "")
+
+        entry = ClinicalEntry.objects.create(
             record=record,
             created_by=request.user,
+            content="",  # never store plaintext
             **validated_data,
         )
+
+        self._encrypt_content(entry.id, plaintext)
+        return entry
+
+    def update(self, instance, validated_data):
+        plaintext = validated_data.pop("content", None)
+
+        # update other fields normally
+        for k, v in validated_data.items():
+            setattr(instance, k, v)
+
+        # ensure plaintext content stays empty
+        instance.content = ""
+        instance.save()
+
+        # if content was provided, update encrypted column
+        if plaintext is not None:
+            self._encrypt_content(instance.id, plaintext)
+
+        return instance
