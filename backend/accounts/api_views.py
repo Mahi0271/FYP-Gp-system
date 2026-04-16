@@ -1,26 +1,17 @@
-from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
-
 from django.contrib.auth import authenticate
 
 import pyotp
-from rest_framework_simplejwt.tokens import RefreshToken
-
-from .models import User
-from drf_spectacular.utils import extend_schema, OpenApiExample
-from drf_spectacular.types import OpenApiTypes
-from rest_framework.exceptions import ValidationError, PermissionDenied, NotFound
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
-
+from rest_framework.exceptions import ValidationError, PermissionDenied, NotFound
+from rest_framework_simplejwt.tokens import RefreshToken
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.types import OpenApiTypes
 
-from .models import User
-from .serializers import PatientContactUpdateSerializer
-
 from audits.utils import log_event
+from .models import User
+from .serializers import PatientContactUpdateSerializer, PatientRegisterSerializer
 
 
 class MeView(APIView):
@@ -28,12 +19,40 @@ class MeView(APIView):
 
     def get(self, request):
         u = request.user
-        return Response({
+        data = {
             "id": u.id,
             "username": u.username,
             "role": getattr(u, "role", None),
             "mfa_enabled": bool(getattr(u, "mfa_enabled", False)),
-        })
+        }
+        if u.role == User.Role.PATIENT:
+            profile = getattr(u, "patient_profile", None)
+            gp = getattr(profile, "assigned_gp", None)
+            data["assigned_gp"] = gp.user_id if gp else None
+        return Response(data)
+
+
+class PatientSignupView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        request=PatientRegisterSerializer,
+        responses={201: OpenApiTypes.OBJECT},
+        description="Public patient signup. Creates a PATIENT user. Assigned GP is auto-set by signals.",
+    )
+    def post(self, request):
+        serializer = PatientRegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        return Response(
+            {
+                "id": user.id,
+                "username": user.username,
+                "role": user.role,
+            },
+            status=201,
+        )
 
 
 class ReceptionistUpdatePatientContactView(APIView):
@@ -51,7 +70,6 @@ class ReceptionistUpdatePatientContactView(APIView):
     def patch(self, request, patient_id: int):
         u: User = request.user
 
-        # Receptionist-only (superuser allowed)
         if not (u.is_superuser or u.role == User.Role.RECEPTIONIST):
             raise PermissionDenied("Only receptionists can update patient contact details.")
 
@@ -64,7 +82,6 @@ class ReceptionistUpdatePatientContactView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.update(patient, serializer.validated_data)
 
-        # Audit log (recommended for FR14 accountability)
         log_event(
             request,
             action="PATIENT_CONTACT_UPDATE",
@@ -73,7 +90,6 @@ class ReceptionistUpdatePatientContactView(APIView):
             metadata={"patient_id": patient.id},
         )
 
-        # Return updated data (clean response)
         patient.refresh_from_db()
         profile = getattr(patient, "patient_profile", None)
 
@@ -93,22 +109,19 @@ class ReceptionistUpdatePatientContactView(APIView):
             }
         })
 
+
 class MFASetupView(APIView):
     """
     Generates a new TOTP secret for the logged-in user and returns an otpauth:// URL.
-    You can paste the otpauth URL into a QR generator or directly into an authenticator app.
     """
     permission_classes = [IsAuthenticated]
-
-    
 
     def post(self, request):
         u: User = request.user
 
-        # Generate a new secret (base32)
         secret = pyotp.random_base32()
         u.mfa_secret = secret
-        u.mfa_enabled = False  # will be enabled only after verify
+        u.mfa_enabled = False
         u.save(update_fields=["mfa_secret", "mfa_enabled"])
 
         issuer = "GP Secure System"
@@ -128,19 +141,16 @@ class MFAEnableView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-    request={
-        "application/json": {
-            "type": "object",
-            "properties": {
-                "code": {"type": "string", "example": "123456"},
-            },
-            "required": ["code"],
-        }
-    },
-    responses={200: OpenApiTypes.OBJECT},
-    description="Disable MFA for the authenticated user. Requires a valid 6-digit TOTP code.",
-)
-
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {"code": {"type": "string", "example": "123456"}},
+                "required": ["code"],
+            }
+        },
+        responses={200: OpenApiTypes.OBJECT},
+        description="Enable MFA for the authenticated user. Requires a valid 6-digit TOTP code.",
+    )
     def post(self, request):
         u: User = request.user
         code = str(request.data.get("code", "")).strip()
@@ -165,19 +175,16 @@ class MFADisableView(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-    request={
-        "application/json": {
-            "type": "object",
-            "properties": {
-                "code": {"type": "string", "example": "123456"},
-            },
-            "required": ["code"],
-        }
-    },
-    responses={200: OpenApiTypes.OBJECT},
-    description="Enable MFA for the authenticated user. Requires a valid 6-digit TOTP code.",
-)
-
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {"code": {"type": "string", "example": "123456"}},
+                "required": ["code"],
+            }
+        },
+        responses={200: OpenApiTypes.OBJECT},
+        description="Disable MFA for the authenticated user. Requires a valid 6-digit TOTP code.",
+    )
     def post(self, request):
         u: User = request.user
         code = str(request.data.get("code", "")).strip()
@@ -192,7 +199,6 @@ class MFADisableView(APIView):
         if not totp.verify(code, valid_window=1):
             raise ValidationError({"code": "Invalid code."})
 
-        # Disable MFA (keep secret so you can re-enable without re-setup; or clear it if you prefer)
         u.mfa_enabled = False
         u.save(update_fields=["mfa_enabled"])
 
@@ -205,25 +211,24 @@ class MFAVerifyLoginView(APIView):
     POST { username, password, code } -> returns JWT pair if correct.
     For non-MFA users, you can still use /api/token/ as normal.
     """
-    authentication_classes = []  # allow anonymous
+    authentication_classes = []
     permission_classes = []
 
     @extend_schema(
-    request={
-        "application/json": {
-            "type": "object",
-            "properties": {
-                "username": {"type": "string", "example": "patient1"},
-                "password": {"type": "string", "example": "clothes9"},
-                "code": {"type": "string", "example": "123456"},
-            },
-            "required": ["username", "password", "code"],
-        }
-    },
-    responses={200: OpenApiTypes.OBJECT},
-    description="MFA login verification. Provide username, password, and TOTP code to receive JWT tokens.",
-)
-
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "username": {"type": "string", "example": "patient1"},
+                    "password": {"type": "string", "example": "clothes9"},
+                    "code": {"type": "string", "example": "123456"},
+                },
+                "required": ["username", "password", "code"],
+            }
+        },
+        responses={200: OpenApiTypes.OBJECT},
+        description="MFA login verification. Provide username, password, and TOTP code to receive JWT tokens.",
+    )
     def post(self, request):
         username = str(request.data.get("username", "")).strip()
         password = str(request.data.get("password", ""))
@@ -236,7 +241,6 @@ class MFAVerifyLoginView(APIView):
         if not user:
             raise ValidationError({"detail": "Invalid username or password."})
 
-        # If user doesn't have MFA enabled, we still allow this endpoint (optional)
         if not getattr(user, "mfa_enabled", False):
             refresh = RefreshToken.for_user(user)
             return Response({
@@ -261,36 +265,3 @@ class MFAVerifyLoginView(APIView):
             "access": str(refresh.access_token),
             "mfa_enabled": True,
         })
-    
-
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-from drf_spectacular.utils import extend_schema
-from drf_spectacular.types import OpenApiTypes
-
-from .serializers import PatientRegisterSerializer
-
-
-class PatientSignupView(APIView):
-    permission_classes = [AllowAny]
-
-    @extend_schema(
-        request=PatientRegisterSerializer,
-        responses={201: OpenApiTypes.OBJECT},
-        description="Public patient signup. Creates a PATIENT user. Assigned GP is auto-set by signals.",
-    )
-    def post(self, request):
-        serializer = PatientRegisterSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-
-        return Response(
-            {
-                "id": user.id,
-                "username": user.username,
-                "role": user.role,
-            },
-            status=201,
-        )

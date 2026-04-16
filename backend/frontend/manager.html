@@ -1,131 +1,370 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Manager Portal</title>
+  <title>Manager Portal — GP Secure System</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="topbar">
-    <div class="topbar-inner">
-      <div class="brand"><span class="dot"></span> Manager Portal <span id="whoami" class="role-pill"></span></div>
-      <div class="actions">
-        <button id="btnSwitch" class="btn secondary">Switch user</button>
-        <button id="btnLogout" class="btn danger">Logout</button>
+<div id="toast" class="toast"><span class="tag">OK</span><span class="msg"></span></div>
+
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="dot"></div>
+      <div>
+        <div class="brand-name">GP Secure System</div>
+        <div class="brand-sub">Manager Portal</div>
       </div>
     </div>
-  </div>
+    <ul class="sidebar-nav">
+      <li><button class="nav-link" data-section="dashboard">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </button></li>
+      <li><button class="nav-link" data-section="audits">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Audit Logs
+      </button></li>
+      <li><button class="nav-link" data-section="account">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Account
+      </button></li>
+    </ul>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebarAvatar">M</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-username" id="sidebarUsername">Loading…</div>
+          <div class="sidebar-role" id="sidebarRole">Practice Manager</div>
+        </div>
+      </div>
+      <button id="btnLogout" class="btn btn-danger btn-sm btn-full">Sign Out</button>
+    </div>
+  </aside>
 
-  <div id="toast" class="toast"><span class="tag">OK</span><span class="msg"></span></div>
+  <!-- Main -->
+  <main class="main-content">
 
-  <div class="container">
-    <div class="card">
-      <div class="card-h">
-        <h3>Audit logs</h3>
-        <div class="actions">
-          <button id="btnSearch" class="btn">Search</button>
-          <button id="btnClear" class="btn secondary">Clear filters</button>
+    <!-- ======== DASHBOARD ======== -->
+    <div id="section-dashboard" class="section">
+      <div class="section-header">
+        <div>
+          <h2>Practice Dashboard</h2>
+          <p class="muted">Key metrics for your GP practice.</p>
+        </div>
+        <button id="btnDashRefresh" class="btn btn-secondary">Refresh</button>
+      </div>
+
+      <!-- Date range filter -->
+      <div class="filter-bar" style="margin-bottom:24px;">
+        <div class="form-group">
+          <label>From Date</label>
+          <input id="dashFrom" type="date" />
+        </div>
+        <div class="form-group">
+          <label>To Date</label>
+          <input id="dashTo" type="date" />
+        </div>
+        <div class="form-group" style="flex:0;min-width:auto;">
+          <label>&nbsp;</label>
+          <button id="btnDashApply" class="btn">Apply</button>
+        </div>
+        <div class="form-group" style="flex:0;min-width:auto;">
+          <label>&nbsp;</label>
+          <button id="btnDashReset" class="btn btn-secondary">Last 7 Days</button>
         </div>
       </div>
 
-      <div class="card-b">
-        <div class="grid three">
-          <div class="field">
-            <label>Action</label>
-            <input id="action" placeholder="e.g. APPOINTMENT_CREATE" />
-          </div>
-          <div class="field">
-            <label>Object type</label>
-            <input id="objectType" placeholder="e.g. appointment, clinical_entry" />
-          </div>
-          <div class="field">
-            <label>User id</label>
-            <input id="userId" type="number" placeholder="e.g. 5" />
+      <!-- Stats row -->
+      <div class="stat-grid" id="statGrid">
+        <div class="stat-card brand">
+          <div class="stat-label">Appointments</div>
+          <div class="stat-value" id="statApptTotal">—</div>
+          <div class="stat-sub" id="statApptRange">in range</div>
+        </div>
+        <div class="stat-card warn">
+          <div class="stat-label">Upcoming</div>
+          <div class="stat-value" id="statUpcoming">—</div>
+          <div class="stat-sub">All future appointments</div>
+        </div>
+        <div class="stat-card ok">
+          <div class="stat-label">Records</div>
+          <div class="stat-value" id="statRecords">—</div>
+          <div class="stat-sub">Total patient records</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-label">Entries</div>
+          <div class="stat-value" id="statEntries">—</div>
+          <div class="stat-sub">Created in range</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Audit Events</div>
+          <div class="stat-value" id="statAudits">—</div>
+          <div class="stat-sub">Logged in range</div>
+        </div>
+      </div>
+
+      <!-- Appointments by status -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><h3>Appointments by Status</h3></div>
+        <div class="card-body">
+          <div style="display:flex;gap:16px;flex-wrap:wrap;" id="statusBreakdown">
+            <div class="stat-card warn" style="flex:1;min-width:100px;">
+              <div class="stat-label">Requested</div>
+              <div class="stat-value" id="sRequested">—</div>
+            </div>
+            <div class="stat-card brand" style="flex:1;min-width:100px;">
+              <div class="stat-label">Confirmed</div>
+              <div class="stat-value" id="sConfirmed">—</div>
+            </div>
+            <div class="stat-card ok" style="flex:1;min-width:100px;">
+              <div class="stat-label">Completed</div>
+              <div class="stat-value" id="sCompleted">—</div>
+            </div>
+            <div class="stat-card" style="flex:1;min-width:100px;">
+              <div class="stat-label">Cancelled</div>
+              <div class="stat-value" id="sCancelled">—</div>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div class="grid two" style="margin-top:10px;">
-          <div class="field">
-            <label>Date from</label>
-            <input id="dateFrom" type="date" />
-          </div>
-          <div class="field">
-            <label>Date to</label>
-            <input id="dateTo" type="date" />
-          </div>
-        </div>
-
-        <hr class="sep" />
-
-        <div id="auditTable"></div>
-
-        <details class="raw" id="auditRaw">
-          <summary>Show raw JSON (debug)</summary>
-          <pre></pre>
-        </details>
-
-        <div class="note" style="margin-top:10px;">
-          Filters are optional. Leave blank to see all logs (manager-only).
+      <!-- Top actions -->
+      <div class="card">
+        <div class="card-header"><h3>Top Audit Actions</h3></div>
+        <div class="card-body">
+          <div id="topActions"></div>
         </div>
       </div>
     </div>
-  </div>
 
-  <script src="api.js"></script>
-  <script src="common.js"></script>
-  <script>
-    let me = null;
+    <!-- ======== AUDIT LOGS ======== -->
+    <div id="section-audits" class="section">
+      <div class="section-header">
+        <h2>Audit Logs</h2>
+        <button id="btnAuditRefresh" class="btn btn-secondary">Refresh</button>
+      </div>
 
-    function qsFromFilters(){
-      const p = new URLSearchParams();
-      const action = $("action").value.trim();
-      const object_type = $("objectType").value.trim();
-      const user = $("userId").value.trim();
-      const date_from = $("dateFrom").value;
-      const date_to = $("dateTo").value;
+      <div class="filter-bar">
+        <div class="form-group">
+          <label>Action</label>
+          <input id="auditAction" type="text" placeholder="e.g. APPOINTMENT_CREATE" />
+        </div>
+        <div class="form-group">
+          <label>Object Type</label>
+          <input id="auditObject" type="text" placeholder="e.g. appointment" />
+        </div>
+        <div class="form-group">
+          <label>User ID</label>
+          <input id="auditUser" type="number" placeholder="User ID" />
+        </div>
+        <div class="form-group">
+          <label>From Date</label>
+          <input id="auditFrom" type="date" />
+        </div>
+        <div class="form-group">
+          <label>To Date</label>
+          <input id="auditTo" type="date" />
+        </div>
+        <div class="form-group" style="flex:0;min-width:auto;">
+          <label>&nbsp;</label>
+          <button id="btnAuditSearch" class="btn">Search</button>
+        </div>
+        <div class="form-group" style="flex:0;min-width:auto;">
+          <label>&nbsp;</label>
+          <button id="btnAuditClear" class="btn btn-secondary">Clear</button>
+        </div>
+      </div>
 
-      if (action) p.set("action", action);
-      if (object_type) p.set("object_type", object_type);
-      if (user) p.set("user", user);
-      if (date_from) p.set("date_from", date_from);
-      if (date_to) p.set("date_to", date_to);
+      <div id="auditTable"></div>
+    </div>
 
-      const s = p.toString();
-      return s ? `?${s}` : "";
-    }
+    <!-- ======== ACCOUNT ======== -->
+    <div id="section-account" class="section">
+      <div class="section-header"><h2>Account Settings</h2></div>
+      <div class="card mfa-card">
+        <div class="card-header"><h3>Two-Factor Authentication</h3></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:16px;">
+          <div class="mfa-status-row">
+            <span class="status-label">MFA Status:</span>
+            <span id="mfaStatus"><span class="badge badge-cancelled">Disabled</span></span>
+          </div>
+          <div id="mfaSetupArea">
+            <p class="muted" style="font-size:13px;margin-bottom:12px;">
+              Protect your account with a time-based one-time password (TOTP) authenticator app.
+            </p>
+            <button id="btnMfaSetup" class="btn">Set Up Two-Factor Auth</button>
 
-    async function loadAudits(){
-      try{
-        const data = await apiFetch(`/api/audits/${qsFromFilters()}`);
-        renderAuditTable("auditTable", data);
-        setRawJson("auditRaw", data);
-        showToast("Audit logs loaded.", "ok");
-      }catch(e){
-        showToast(e.message, "err");
-        $("auditTable").innerHTML = `<span class="pill">Failed to load audit logs.</span>`;
+            <div id="mfaSetupResult" style="display:none;margin-top:20px;flex-direction:column;gap:16px;">
+              <div class="mfa-step">
+                <div class="mfa-step-header">
+                  <span class="mfa-step-num">1</span>
+                  Scan with your authenticator app
+                </div>
+                <div class="mfa-qr-wrap">
+                  <div id="mfaQrContainer"></div>
+                </div>
+                <p class="muted" style="font-size:12px;margin-top:10px;text-align:center;">
+                  Open <strong style="color:var(--text)">Google Authenticator</strong>, <strong style="color:var(--text)">Authy</strong>, or any TOTP app and scan the code above.
+                  On most phones you can also point your camera directly at it.
+                </p>
+              </div>
+
+              <details class="mfa-manual">
+                <summary>Can't scan? Enter the key manually</summary>
+                <div class="mfa-manual-body">
+                  <div class="secret-label">Secret Key</div>
+                  <div class="mfa-secret-row">
+                    <div class="secret-box" id="mfaSecret"></div>
+                    <button id="btnCopySecret" class="btn btn-sm btn-secondary" type="button">Copy</button>
+                  </div>
+                </div>
+              </details>
+
+              <div class="mfa-step">
+                <div class="mfa-step-header">
+                  <span class="mfa-step-num">2</span>
+                  Enter the 6-digit code from your app
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <input id="mfaEnableCode" type="text" inputmode="numeric" maxlength="6"
+                         placeholder="000000" autocomplete="one-time-code" />
+                </div>
+                <button id="btnMfaEnable" class="btn btn-success" style="margin-top:10px;width:100%;">Activate MFA</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="mfaDisableArea" style="display:none;flex-direction:column;gap:12px;">
+            <p class="muted" style="font-size:13px;">MFA is currently active. Enter your authenticator code below to disable it.</p>
+            <div class="form-group">
+              <label>Current Authentication Code</label>
+              <input id="mfaDisableCode" type="text" inputmode="numeric" maxlength="6" placeholder="6-digit code" />
+            </div>
+            <button id="btnMfaDisable" class="btn btn-danger">Disable MFA</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="api.js"></script>
+<script src="common.js"></script>
+<script>
+  let me = null;
+
+  (async () => {
+    me = await requireAuth(["PRACTICE_MANAGER"]);
+    if (!me) return;
+    mountSidebar(me);
+    initNav("dashboard");
+    setupMfa();
+
+    // Default date range: last 7 days
+    setDefaultRange();
+
+    $("btnDashApply").onclick  = loadDashboard;
+    $("btnDashRefresh").onclick = loadDashboard;
+    $("btnDashReset").onclick   = () => { setDefaultRange(); loadDashboard(); };
+    $("btnAuditSearch").onclick = loadAudits;
+    $("btnAuditRefresh").onclick = loadAudits;
+    $("btnAuditClear").onclick  = clearAuditFilters;
+
+    await Promise.all([loadDashboard(), loadAudits()]);
+  })();
+
+  function setDefaultRange() {
+    const today = new Date();
+    const from  = new Date(today);
+    from.setDate(today.getDate() - 6);
+    $("dashFrom").value = from.toISOString().slice(0, 10);
+    $("dashTo").value   = today.toISOString().slice(0, 10);
+  }
+
+  // ---- Dashboard ----
+  async function loadDashboard() {
+    const from = $("dashFrom").value;
+    const to   = $("dashTo").value;
+    const p = new URLSearchParams();
+    if (from) p.set("date_from", from);
+    if (to)   p.set("date_to", to);
+    const qs = p.toString() ? `?${p}` : "";
+
+    try {
+      const data = await apiFetch(`/api/dashboard/${qs}`);
+      const appts   = data.appointments || {};
+      const byStatus = appts.by_status_in_range || {};
+      const entries = data.entries || {};
+      const audits  = data.audits  || {};
+      const records = data.records || {};
+
+      $("statApptTotal").textContent = appts.total_in_range ?? "—";
+      $("statUpcoming").textContent  = appts.upcoming_total ?? "—";
+      $("statRecords").textContent   = records.total ?? "—";
+      $("statEntries").textContent   = entries.created_in_range ?? "—";
+      $("statAudits").textContent    = audits.total_in_range ?? "—";
+
+      if (data.range) {
+        $("statApptRange").textContent = `${fmtDateOnly(data.range.date_from)} — ${fmtDateOnly(data.range.date_to)}`;
       }
-    }
 
-    function clearFilters(){
-      $("action").value = "";
-      $("objectType").value = "";
-      $("userId").value = "";
-      $("dateFrom").value = "";
-      $("dateTo").value = "";
-      showToast("Filters cleared.", "ok");
-    }
+      $("sRequested").textContent = byStatus["REQUESTED"] ?? 0;
+      $("sConfirmed").textContent = byStatus["CONFIRMED"] ?? 0;
+      $("sCompleted").textContent = byStatus["COMPLETED"] ?? 0;
+      $("sCancelled").textContent = byStatus["CANCELLED"] ?? 0;
 
-    (async () => {
-      me = await requireAuth(["PRACTICE_MANAGER"]);
-      if (!me) return;
-      mountTopbar(me);
+      // Top actions
+      const topActions = audits.top_actions || [];
+      if (!topActions.length) {
+        $("topActions").innerHTML = `<div class="empty-state"><div>No audit actions in this period.</div></div>`;
+      } else {
+        const maxCount = topActions[0].count || 1;
+        $("topActions").innerHTML = topActions.map(a => `
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+            <code style="min-width:240px;font-size:12px;color:var(--brand);">${escapeHtml(a.action)}</code>
+            <div style="flex:1;height:6px;background:rgba(255,255,255,.07);border-radius:999px;overflow:hidden;">
+              <div style="width:${Math.round((a.count/maxCount)*100)}%;height:100%;background:var(--brand);border-radius:999px;"></div>
+            </div>
+            <span style="font-size:13px;font-weight:700;min-width:30px;text-align:right;">${a.count}</span>
+          </div>`).join("");
+      }
+    } catch(e) { showToast(e.message, "err"); }
+  }
 
-      $("btnSearch").onclick = loadAudits;
-      $("btnClear").onclick = clearFilters;
+  // ---- Audit Logs ----
+  async function loadAudits() {
+    const p = new URLSearchParams();
+    const action = $("auditAction").value.trim();
+    const object = $("auditObject").value.trim();
+    const user   = $("auditUser").value.trim();
+    const from   = $("auditFrom").value;
+    const to     = $("auditTo").value;
+    if (action) p.set("action", action);
+    if (object) p.set("object_type", object);
+    if (user)   p.set("user", user);
+    if (from)   p.set("date_from", from);
+    if (to)     p.set("date_to", to);
+    const qs = p.toString() ? `?${p}` : "";
+    try {
+      const logs = await apiFetch(`/api/audits/${qs}`);
+      renderAuditTable("auditTable", logs);
+    } catch(e) { showToast(e.message, "err"); }
+  }
 
-      await loadAudits();
-    })();
-  </script>
+  function clearAuditFilters() {
+    ["auditAction","auditObject","auditFrom","auditTo"].forEach(id => $(id).value = "");
+    $("auditUser").value = "";
+    loadAudits();
+  }
+
+  // ---- MFA (handled by setupMfa() in common.js) ----
+</script>
 </body>
 </html>

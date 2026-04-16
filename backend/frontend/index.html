@@ -1,57 +1,60 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>GP Secure System — Login</title>
+  <title>GP Secure System — Sign In</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="topbar">
-    <div class="topbar-inner">
-      <div class="brand"><span class="dot"></span> GP Secure System</div>
-      <div class="actions">
-        <span class="pill">Prototype UI</span>
-      </div>
-    </div>
-  </div>
-
   <div id="toast" class="toast"><span class="tag">OK</span><span class="msg"></span></div>
 
-  <div class="center">
-    <div class="login card">
-      <div class="card-h">
-        <h3>Sign in</h3>
-        <span class="pill">JWT</span>
-      </div>
-      <div class="card-b">
-        <h1>Welcome back</h1>
-        <p class="sub">
-          Use your role account to demo permissions and workflows (appointments, records, audits).
-        </p>
+  <div class="auth-page">
+    <div class="auth-brand">
+      <div class="dot"></div>
+      GP Secure System
+    </div>
 
-        <div class="row">
-          <div class="field">
+    <div class="auth-card">
+      <div class="auth-card-header">
+        <h2>Welcome back</h2>
+        <p>Sign in to your account to continue.</p>
+      </div>
+
+      <div class="auth-card-body">
+
+        <!-- Step 1: Credentials -->
+        <div id="step1" class="auth-step active">
+          <div class="form-group">
             <label>Username</label>
-            <input id="username" placeholder="e.g. patient1" autocomplete="username" />
+            <input id="username" type="text" placeholder="Enter your username" autocomplete="username" />
           </div>
-          <div class="field">
+          <div class="form-group">
             <label>Password</label>
             <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
           </div>
+          <button id="btnLogin" class="btn btn-full">Sign In</button>
         </div>
 
-        <div style="margin-top:12px" class="row">
-          <button id="btnLogin" class="btn">Sign in</button>
-          <button id="btnFillPatient" class="btn secondary">Fill patient demo</button>
-          <button id="btnFillGp" class="btn secondary">Fill GP demo</button>
-          <button id="btnFillReception" class="btn secondary">Fill receptionist demo</button>
-          <button id="btnFillManager" class="btn secondary">Fill manager demo</button>
+        <!-- Step 2: MFA -->
+        <div id="step2" class="auth-step">
+          <div class="info-box">
+            Two-factor authentication is enabled on this account.
+            Open your authenticator app and enter the 6-digit code.
+          </div>
+          <div class="form-group">
+            <label>Authentication Code</label>
+            <input id="mfaCode" type="text" inputmode="numeric" maxlength="6"
+                   placeholder="000000" autocomplete="one-time-code" />
+          </div>
+          <button id="btnMfaVerify" class="btn btn-full">Verify &amp; Sign In</button>
+          <button id="btnMfaBack" class="btn btn-ghost btn-full">← Back</button>
         </div>
 
-        <hr class="sep" />
+      </div>
 
-        
+      <div class="auth-card-footer">
+        New patient? <a href="signup.html">Register here →</a>
       </div>
     </div>
   </div>
@@ -59,10 +62,13 @@
   <script src="api.js"></script>
   <script src="common.js"></script>
   <script>
+    // Temp storage for MFA step (JS vars only, never localStorage)
+    let _pendingUsername = "";
+    let _pendingPassword = "";
+
     // If already logged in, redirect
     (async () => {
-      const token = getToken();
-      if (token) {
+      if (getToken()) {
         try {
           const me = await fetchMe();
           go(roleHome(me.role));
@@ -72,30 +78,81 @@
       }
     })();
 
-    $("btnFillPatient").onclick = () => { $("username").value="patient1"; $("password").value="clothes9"; };
-    $("btnFillGp").onclick = () => { $("username").value="gp1"; $("password").value="clothes9"; };
-    $("btnFillReception").onclick = () => { $("username").value="reception1"; $("password").value="clothes9"; };
-    $("btnFillManager").onclick = () => { $("username").value="manager1"; $("password").value="clothes9"; };
+    function showStep(n) {
+      $("step1").classList.toggle("active", n === 1);
+      $("step2").classList.toggle("active", n === 2);
+    }
 
+    // Step 1: username + password
     $("btnLogin").onclick = async () => {
+      const username = $("username").value.trim();
+      const password = $("password").value;
+      if (!username || !password) {
+        showToast("Please enter your username and password.", "warn");
+        return;
+      }
       try {
-        const username = $("username").value.trim();
-        const password = $("password").value;
-
-        if (!username || !password) {
-          showToast("Enter username and password.", "warn");
-          return;
-        }
-
+        $("btnLogin").disabled = true;
         const tok = await apiFetch("/api/token/", { method: "POST", body: { username, password } });
         setToken(tok.access);
-
         const me = await fetchMe();
-        showToast(`Signed in as ${me.username} (${me.role}).`, "ok");
-        go(roleHome(me.role));
+
+        if (me.mfa_enabled) {
+          // Don't keep the token yet — user must complete MFA
+          clearToken();
+          _pendingUsername = username;
+          _pendingPassword = password;
+          showStep(2);
+          $("mfaCode").focus();
+        } else {
+          showToast(`Signed in as ${me.username}.`, "ok");
+          setTimeout(() => go(roleHome(me.role)), 600);
+        }
       } catch (e) {
         showToast(e.message, "err");
+      } finally {
+        $("btnLogin").disabled = false;
       }
+    };
+
+    // Allow Enter key on password field
+    $("password").addEventListener("keydown", e => {
+      if (e.key === "Enter") $("btnLogin").click();
+    });
+
+    // Step 2: TOTP code
+    $("btnMfaVerify").onclick = async () => {
+      const code = $("mfaCode").value.trim();
+      if (!code || code.length < 6) {
+        showToast("Enter the 6-digit code from your authenticator app.", "warn");
+        return;
+      }
+      try {
+        $("btnMfaVerify").disabled = true;
+        const tok = await apiFetch("/api/accounts/mfa/verify/", {
+          method: "POST",
+          body: { username: _pendingUsername, password: _pendingPassword, code }
+        });
+        setToken(tok.access);
+        const me = await fetchMe();
+        showToast("Signed in successfully.", "ok");
+        setTimeout(() => go(roleHome(me.role)), 600);
+      } catch (e) {
+        showToast(e.message, "err");
+      } finally {
+        $("btnMfaVerify").disabled = false;
+      }
+    };
+
+    $("mfaCode").addEventListener("keydown", e => {
+      if (e.key === "Enter") $("btnMfaVerify").click();
+    });
+
+    $("btnMfaBack").onclick = () => {
+      _pendingUsername = "";
+      _pendingPassword = "";
+      $("mfaCode").value = "";
+      showStep(1);
     };
   </script>
 </body>

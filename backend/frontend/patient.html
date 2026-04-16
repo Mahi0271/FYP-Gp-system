@@ -1,284 +1,415 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Patient Portal</title>
+  <title>Patient Portal — GP Secure System</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="topbar">
-    <div class="topbar-inner">
-      <div class="brand"><span class="dot"></span> Patient Portal <span id="whoami" class="role-pill"></span></div>
-      <div class="actions">
-        <button id="btnSwitch" class="btn secondary">Switch user</button>
-        <button id="btnLogout" class="btn danger">Logout</button>
+<div id="toast" class="toast"><span class="tag">OK</span><span class="msg"></span></div>
+
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="dot"></div>
+      <div>
+        <div class="brand-name">GP Secure System</div>
+        <div class="brand-sub">Patient Portal</div>
       </div>
     </div>
-  </div>
-
-  <div id="toast" class="toast"><span class="tag">OK</span><span class="msg"></span></div>
-
-  <div class="container">
-    <div class="grid two">
-      <div class="card">
-        <div class="card-h">
-          <h3>Find availability</h3>
-          <span class="pill">15-min slots</span>
+    <ul class="sidebar-nav">
+      <li><button class="nav-link" data-section="dashboard">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </button></li>
+      <li><button class="nav-link" data-section="appointments">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Appointments
+      </button></li>
+      <li><button class="nav-link" data-section="record">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Medical Record
+      </button></li>
+      <li><button class="nav-link" data-section="account">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Account
+      </button></li>
+    </ul>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebarAvatar">P</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-username" id="sidebarUsername">Loading…</div>
+          <div class="sidebar-role" id="sidebarRole">Patient</div>
         </div>
-        <div class="card-b">
-          <div class="row">
-            <div class="field">
-              <label>Date</label>
-              <input id="avDate" type="date" />
-            </div>
-            <div class="field">
-              <label>GP user id</label>
-              <input id="avGp" type="number" placeholder="e.g. 5" />
-            </div>
-            <div class="field" style="min-width:160px; flex:0;">
-              <button id="btnAvail" class="btn">Search slots</button>
-            </div>
-          </div>
+      </div>
+      <button id="btnLogout" class="btn btn-danger btn-sm btn-full">Sign Out</button>
+    </div>
+  </aside>
 
-          <div style="margin-top:12px" id="avTable"></div>
+  <!-- Main -->
+  <main class="main-content">
 
-          <details class="raw" id="avRaw">
-            <summary>Show raw JSON (debug)</summary>
-            <pre></pre>
-          </details>
+    <!-- ======== DASHBOARD ======== -->
+    <div id="section-dashboard" class="section">
+      <div class="section-header">
+        <div>
+          <h2 id="welcomeMsg">Welcome</h2>
+          <p class="muted">Here's a summary of your health portal.</p>
+        </div>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card brand">
+          <div class="stat-label">Upcoming</div>
+          <div class="stat-value" id="statUpcoming">—</div>
+          <div class="stat-sub">Appointments</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total</div>
+          <div class="stat-value" id="statTotal">—</div>
+          <div class="stat-sub">All appointments</div>
+        </div>
+        <div class="stat-card ok">
+          <div class="stat-label">Assigned GP</div>
+          <div class="stat-value" id="statGp">—</div>
+          <div class="stat-sub">Your doctor</div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-h">
-          <h3>Book appointment</h3>
-          <span class="pill">Patient request</span>
-        </div>
-        <div class="card-b">
-          <div class="row">
-            <div class="field">
-              <label>Patient id (auto)</label>
-              <input id="patientId" type="number" />
-            </div>
-            <div class="field">
-              <label>GP id</label>
-              <input id="gpId" type="number" placeholder="e.g. 5" />
-            </div>
-          </div>
-
-          <div class="row" style="margin-top:10px;">
-            <div class="field">
-              <label>Start time (ISO)</label>
-              <input id="startIso" placeholder="YYYY-MM-DDTHH:MM:SSZ" />
-            </div>
-            <div class="field">
-              <label>End time (ISO)</label>
-              <input id="endIso" placeholder="YYYY-MM-DDTHH:MM:SSZ" />
-            </div>
-          </div>
-
-          <div class="row" style="margin-top:10px;">
-            <div class="field">
-              <label>Reason (optional)</label>
-              <input id="reason" placeholder="e.g. headache for 3 days" />
-            </div>
-            <div class="field" style="min-width:160px; flex:0;">
-              <button id="btnBook" class="btn ok">Book</button>
-            </div>
-          </div>
-
-          <div class="note" style="margin-top:10px;">
-            Use <b>Select</b> on a slot to auto-fill start/end. If your backend auto-assigns GP from profile,
-            including GP here won’t hurt.
-          </div>
-
-          <details class="raw" id="bookRaw">
-            <summary>Show last booking response (debug)</summary>
-            <pre></pre>
-          </details>
+        <div class="card-header"><h3>Recent Appointments</h3></div>
+        <div class="card-body">
+          <div id="dashApptTable"></div>
         </div>
       </div>
     </div>
 
-    <div class="grid two" style="margin-top:14px;">
-      <div class="card">
-        <div class="card-h">
-          <h3>My appointments</h3>
-          <div class="actions">
-            <button id="btnMyAppts" class="btn secondary">Refresh</button>
-          </div>
+    <!-- ======== APPOINTMENTS ======== -->
+    <div id="section-appointments" class="section">
+      <div class="section-header">
+        <h2>My Appointments</h2>
+        <div class="actions">
+          <button id="btnBookOpen" class="btn">+ Book Appointment</button>
+          <button id="btnApptRefresh" class="btn btn-secondary">Refresh</button>
         </div>
-        <div class="card-b">
-          <div id="myApptTable"></div>
+      </div>
 
-          <details class="raw" id="myApptRaw">
-            <summary>Show raw JSON (debug)</summary>
-            <pre></pre>
-          </details>
+      <div class="tab-filters">
+        <button class="tab-filter active" data-filter="all">All</button>
+        <button class="tab-filter" data-filter="upcoming">Upcoming</button>
+        <button class="tab-filter" data-filter="past">Past</button>
+      </div>
+
+      <div id="apptTable"></div>
+    </div>
+
+    <!-- ======== MEDICAL RECORD ======== -->
+    <div id="section-record" class="section">
+      <div class="section-header">
+        <h2>My Medical Record</h2>
+        <button id="btnRecordRefresh" class="btn btn-secondary">Refresh</button>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><h3>Record Details</h3></div>
+        <div class="card-body" id="recordMeta">
+          <div class="empty-state"><div>Loading…</div></div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-h">
-          <h3>My medical record</h3>
-          <div class="actions">
-            <button id="btnMyRecord" class="btn secondary">Refresh</button>
-          </div>
-        </div>
-        <div class="card-b">
-          <div id="recordInfo"></div>
-          <hr class="sep" />
-          <div class="muted" style="margin-bottom:8px;">Record entries</div>
-          <div id="entryTable"></div>
-
-          <details class="raw" id="recordRaw">
-            <summary>Show raw JSON (debug)</summary>
-            <pre></pre>
-          </details>
+        <div class="card-header"><h3>Clinical Entries</h3></div>
+        <div class="card-body">
+          <div id="entryCards"></div>
         </div>
       </div>
     </div>
-  </div>
 
-  <script src="api.js"></script>
-  <script src="common.js"></script>
-  <script>
-    let me = null;
+    <!-- ======== ACCOUNT ======== -->
+    <div id="section-account" class="section">
+      <div class="section-header">
+        <h2>Account Settings</h2>
+      </div>
 
-    function todayStr(){
-      const d = new Date();
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth()+1).padStart(2,"0");
-      const dd = String(d.getDate()).padStart(2,"0");
-      return `${yyyy}-${mm}-${dd}`;
-    }
+      <div class="card mfa-card">
+        <div class="card-header"><h3>Two-Factor Authentication</h3></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:16px;">
+          <div class="mfa-status-row">
+            <span class="status-label">MFA Status:</span>
+            <span id="mfaStatus"><span class="badge badge-cancelled">Disabled</span></span>
+          </div>
 
-    async function loadMyAppointments(){
-      try{
-        const data = await apiFetch("/api/appointments/");
-        renderAppointmentsTable("myApptTable", data, {
-          showGp: true,
-          actions: (a) => {
-            const canCancel = String(a.status).toUpperCase() !== "COMPLETED";
-            return `
-              <div class="actions-inline">
-                <button class="btn danger" data-cancel="${a.id}" ${canCancel ? "" : "disabled"}>Cancel</button>
+          <div id="mfaSetupArea">
+            <p class="muted" style="font-size:13px;margin-bottom:12px;">
+              Protect your account with a time-based one-time password (TOTP) authenticator app.
+            </p>
+            <button id="btnMfaSetup" class="btn">Set Up Two-Factor Auth</button>
+
+            <div id="mfaSetupResult" style="display:none;margin-top:20px;flex-direction:column;gap:16px;">
+              <div class="mfa-step">
+                <div class="mfa-step-header">
+                  <span class="mfa-step-num">1</span>
+                  Scan with your authenticator app
+                </div>
+                <div class="mfa-qr-wrap">
+                  <div id="mfaQrContainer"></div>
+                </div>
+                <p class="muted" style="font-size:12px;margin-top:10px;text-align:center;">
+                  Open <strong style="color:var(--text)">Google Authenticator</strong>, <strong style="color:var(--text)">Authy</strong>, or any TOTP app and scan the code above.
+                  On most phones you can also point your camera directly at it.
+                </p>
               </div>
-            `;
-          }
-        });
-        setRawJson("myApptRaw", data);
 
-        document.querySelectorAll("button[data-cancel]").forEach(btn => {
-          btn.onclick = async () => {
-            const id = btn.getAttribute("data-cancel");
-            try{
-              const res = await apiFetch(`/api/appointments/${id}/`, { method:"PATCH", body:{ status:"CANCELLED" }});
-              showToast(`Cancelled appointment #${id}.`, "ok");
-              await loadMyAppointments();
-            }catch(e){
-              showToast(e.message, "err");
-            }
+              <details class="mfa-manual">
+                <summary>Can't scan? Enter the key manually</summary>
+                <div class="mfa-manual-body">
+                  <div class="secret-label">Secret Key</div>
+                  <div class="mfa-secret-row">
+                    <div class="secret-box" id="mfaSecret"></div>
+                    <button id="btnCopySecret" class="btn btn-sm btn-secondary" type="button">Copy</button>
+                  </div>
+                </div>
+              </details>
+
+              <div class="mfa-step">
+                <div class="mfa-step-header">
+                  <span class="mfa-step-num">2</span>
+                  Enter the 6-digit code from your app
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <input id="mfaEnableCode" type="text" inputmode="numeric" maxlength="6"
+                         placeholder="000000" autocomplete="one-time-code" />
+                </div>
+                <button id="btnMfaEnable" class="btn btn-success" style="margin-top:10px;width:100%;">Activate MFA</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="mfaDisableArea" style="display:none;flex-direction:column;gap:12px;">
+            <p class="muted" style="font-size:13px;">MFA is currently active. Enter your authenticator code below to disable it.</p>
+            <div class="form-group">
+              <label>Current Authentication Code</label>
+              <input id="mfaDisableCode" type="text" inputmode="numeric" maxlength="6" placeholder="6-digit code" />
+            </div>
+            <button id="btnMfaDisable" class="btn btn-danger">Disable MFA</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div><!-- end layout -->
+
+<!-- ======== BOOK APPOINTMENT MODAL ======== -->
+<div id="modalBook" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Book an Appointment</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Select Date</label>
+        <input id="bookDate" type="date" />
+      </div>
+      <button id="btnFindSlots" class="btn">Find Available Slots</button>
+      <div id="slotsArea" style="display:none;flex-direction:column;gap:12px;">
+        <div id="slotGrid" class="slot-grid"></div>
+        <div class="form-group">
+          <label>Reason for Visit <span class="muted">(optional)</span></label>
+          <input id="bookReason" type="text" placeholder="e.g. Recurring headache" />
+        </div>
+      </div>
+      <div id="noGpMsg" class="warn-box" style="display:none">
+        We couldn't detect your assigned GP. Please book through the reception or ensure you have at least one existing appointment.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="btnBookCancel" class="btn btn-secondary">Cancel</button>
+      <button id="btnBookConfirm" class="btn btn-success" disabled>Confirm Booking</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="api.js"></script>
+<script src="common.js"></script>
+<script>
+  let me = null;
+  let allAppts = [];
+  let assignedGpId = null;
+  let selectedSlot = null;
+
+  // ---- Init ----
+  (async () => {
+    me = await requireAuth(["PATIENT"]);
+    if (!me) return;
+    assignedGpId = me.assigned_gp ?? null;
+    mountSidebar(me);
+    $("welcomeMsg").textContent = `Welcome, ${me.username}`;
+    initNav("dashboard");
+    initModalClose("modalBook");
+
+    await Promise.all([loadAppointments(), loadRecord()]);
+    setupMfa();
+  })();
+
+  // ---- Appointments ----
+  async function loadAppointments() {
+    try {
+      allAppts = await apiFetch("/api/appointments/");
+
+      // Stats
+      const now = new Date();
+      const upcoming = allAppts.filter(a => new Date(a.start_time) >= now && a.status !== "CANCELLED");
+      $("statUpcoming").textContent = upcoming.length;
+      $("statTotal").textContent    = allAppts.length;
+      $("statGp").textContent       = assignedGpId ? `GP #${assignedGpId}` : "—";
+
+      renderApptTable("all");
+      renderAppointmentsTable("dashApptTable", allAppts.slice(0, 5), { showGp: true });
+    } catch(e) {
+      showToast(e.message, "err");
+    }
+  }
+
+  function renderApptTable(filter) {
+    let list = allAppts;
+    const now = new Date();
+    if (filter === "upcoming") list = allAppts.filter(a => new Date(a.start_time) >= now);
+    if (filter === "past")     list = allAppts.filter(a => new Date(a.start_time) < now);
+
+    renderAppointmentsTable("apptTable", list, {
+      showGp: true,
+      actions: a => {
+        const s = a.status.toUpperCase();
+        if (s === "COMPLETED" || s === "CANCELLED") return `<span class="badge badge-${s.toLowerCase()}">${s}</span>`;
+        return `<button class="btn btn-sm btn-danger" onclick="cancelAppt(${a.id})">Cancel</button>`;
+      }
+    });
+  }
+
+  async function cancelAppt(id) {
+    if (!confirm("Cancel this appointment?")) return;
+    try {
+      await apiFetch(`/api/appointments/${id}/`, { method: "PATCH", body: { status: "CANCELLED" } });
+      showToast("Appointment cancelled.", "ok");
+      await loadAppointments();
+    } catch(e) { showToast(e.message, "err"); }
+  }
+
+  // Tab filters
+  document.addEventListener("click", e => {
+    if (e.target.classList.contains("tab-filter")) {
+      document.querySelectorAll(".tab-filter").forEach(b => b.classList.remove("active"));
+      e.target.classList.add("active");
+      renderApptTable(e.target.dataset.filter);
+    }
+  });
+
+  $("btnApptRefresh").onclick = loadAppointments;
+
+  // ---- Book Appointment Modal ----
+  $("btnBookOpen").onclick = () => {
+    selectedSlot = null;
+    $("bookDate").value = todayISO();
+    $("bookReason").value = "";
+    $("slotsArea").style.display  = "none";
+    $("noGpMsg").style.display    = "none";
+    $("slotGrid").innerHTML       = "";
+    $("btnBookConfirm").disabled  = true;
+    if (!assignedGpId) {
+      $("noGpMsg").style.display = "block";
+      $("btnFindSlots").disabled = true;
+    } else {
+      $("btnFindSlots").disabled = false;
+    }
+    openModal("modalBook");
+  };
+  $("btnBookCancel").onclick = () => closeModal("modalBook");
+
+  $("btnFindSlots").onclick = async () => {
+    const date = $("bookDate").value;
+    if (!date) { showToast("Select a date first.", "warn"); return; }
+    if (!assignedGpId) { showToast("No GP assigned to your profile.", "warn"); return; }
+    try {
+      $("btnFindSlots").disabled = true;
+      $("btnFindSlots").textContent = "Searching…";
+      const data = await apiFetch(`/api/appointments/availability/?date=${encodeURIComponent(date)}&gp=${assignedGpId}`);
+      const slots = data.available || [];
+
+      if (!slots.length) {
+        $("slotGrid").innerHTML = `<div class="empty-state"><div>No available slots on this date.</div></div>`;
+      } else {
+        $("slotGrid").innerHTML = slots.map((s, i) =>
+          `<button class="slot-btn" data-idx="${i}">${fmtTime(s.start_time)}</button>`
+        ).join("");
+        $("slotGrid").querySelectorAll(".slot-btn").forEach(btn => {
+          btn.onclick = () => {
+            $("slotGrid").querySelectorAll(".slot-btn").forEach(b => b.classList.remove("selected"));
+            btn.classList.add("selected");
+            selectedSlot = slots[Number(btn.dataset.idx)];
+            $("btnBookConfirm").disabled = false;
           };
         });
-      }catch(e){
-        showToast(e.message, "err");
-        $("myApptTable").innerHTML = `<span class="pill">Failed to load appointments.</span>`;
       }
+      $("slotsArea").style.display = "flex";
+    } catch(e) {
+      showToast(e.message, "err");
+    } finally {
+      $("btnFindSlots").disabled = false;
+      $("btnFindSlots").textContent = "Find Available Slots";
     }
+  };
 
-    async function loadMyRecord(){
-      try{
-        const rec = await apiFetch("/api/records/me/");
-        setRawJson("recordRaw", rec);
-
-        // rec might be a single record object or list; normalize
-        const recordObj = Array.isArray(rec) ? rec[0] : rec;
-        if (!recordObj || !recordObj.id){
-          $("recordInfo").innerHTML = `<span class="pill">No record found.</span>`;
-          $("entryTable").innerHTML = "";
-          return;
+  $("btnBookConfirm").onclick = async () => {
+    if (!selectedSlot) { showToast("Select a time slot first.", "warn"); return; }
+    try {
+      $("btnBookConfirm").disabled = true;
+      await apiFetch("/api/appointments/", {
+        method: "POST",
+        body: {
+          start_time: selectedSlot.start_time,
+          end_time:   selectedSlot.end_time,
+          reason:     $("bookReason").value.trim() || undefined,
         }
-
-        renderKeyValue("recordInfo", recordObj);
-
-        const entries = await apiFetch(`/api/records/${recordObj.id}/entries/`);
-        renderEntriesTable("entryTable", entries);
-      }catch(e){
-        showToast(e.message, "err");
-        $("recordInfo").innerHTML = `<span class="pill">Failed to load record.</span>`;
-        $("entryTable").innerHTML = "";
-      }
+      });
+      showToast("Appointment booked successfully!", "ok");
+      closeModal("modalBook");
+      await loadAppointments();
+    } catch(e) {
+      showToast(e.message, "err");
+      $("btnBookConfirm").disabled = false;
     }
+  };
 
-    (async () => {
-      me = await requireAuth(["PATIENT"]);
-      if (!me) return;
-      mountTopbar(me);
+  // ---- Medical Record ----
+  async function loadRecord() {
+    try {
+      const rec = await apiFetch("/api/records/me/");
+      $("recordMeta").innerHTML = `
+        <table style="width:auto">
+          <tbody>
+            <tr><td class="muted" style="padding:6px 16px 6px 0">Record ID</td><td>#${escapeHtml(String(rec.id))}</td></tr>
+            <tr><td class="muted" style="padding:6px 16px 6px 0">Patient</td><td>${escapeHtml(rec.patient_username || "—")}</td></tr>
+            <tr><td class="muted" style="padding:6px 16px 6px 0">Created</td><td>${fmtDate(rec.created_at)}</td></tr>
+            <tr><td class="muted" style="padding:6px 16px 6px 0">Updated</td><td>${fmtDate(rec.updated_at)}</td></tr>
+          </tbody>
+        </table>`;
+      const entries = await apiFetch(`/api/records/${rec.id}/entries/`);
+      renderEntryCards("entryCards", entries);
+    } catch(e) {
+      showToast(e.message, "err");
+      $("recordMeta").innerHTML = `<div class="empty-state">Failed to load record.</div>`;
+    }
+  }
+  $("btnRecordRefresh").onclick = loadRecord;
 
-      $("patientId").value = me.id ?? "";
-      $("avDate").value = todayStr();
-
-      // If you usually use GP id 5, keep it as a friendly default
-      $("avGp").value = localStorage.getItem("patient_gp_hint") || "5";
-      $("gpId").value = $("avGp").value;
-
-      $("btnAvail").onclick = async () => {
-        try{
-          const date = $("avDate").value;
-          const gp = $("avGp").value.trim();
-          if (!date || !gp){
-            showToast("Choose a date and GP id.", "warn");
-            return;
-          }
-          localStorage.setItem("patient_gp_hint", gp);
-
-          const data = await apiFetch(`/api/appointments/availability/?date=${encodeURIComponent(date)}&gp=${encodeURIComponent(gp)}`);
-          renderAvailability("avTable", data, (slot) => {
-            $("startIso").value = slot.start_time;
-            $("endIso").value = slot.end_time;
-            $("gpId").value = gp;
-            showToast("Slot selected — booking form filled.", "ok");
-          });
-          setRawJson("avRaw", data);
-        }catch(e){
-          showToast(e.message, "err");
-          $("avTable").innerHTML = `<span class="pill">No availability.</span>`;
-        }
-      };
-
-      $("btnBook").onclick = async () => {
-        try{
-          const body = {
-            patient: Number($("patientId").value || me.id),
-            gp: Number($("gpId").value || 0),
-            start_time: $("startIso").value.trim(),
-            end_time: $("endIso").value.trim(),
-            status: "REQUESTED",
-            reason: $("reason").value.trim()
-          };
-
-          if (!body.start_time || !body.end_time){
-            showToast("Pick a slot first (start/end).", "warn");
-            return;
-          }
-
-          const data = await apiFetch("/api/appointments/", { method:"POST", body });
-          setRawJson("bookRaw", data);
-          showToast(`Booked appointment #${data.id}.`, "ok");
-          await loadMyAppointments();
-        }catch(e){
-          showToast(e.message, "err");
-        }
-      };
-
-      $("btnMyAppts").onclick = loadMyAppointments;
-      $("btnMyRecord").onclick = loadMyRecord;
-
-      await loadMyAppointments();
-      await loadMyRecord();
-    })();
-  </script>
+  // ---- MFA (handled by setupMfa() in common.js) ----
+</script>
 </body>
 </html>

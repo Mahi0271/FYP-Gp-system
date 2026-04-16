@@ -1,153 +1,439 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Receptionist Portal</title>
+  <title>Receptionist Portal — GP Secure System</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="topbar">
-    <div class="topbar-inner">
-      <div class="brand"><span class="dot"></span> Receptionist Portal <span id="whoami" class="role-pill"></span></div>
-      <div class="actions">
-        <button id="btnSwitch" class="btn secondary">Switch user</button>
-        <button id="btnLogout" class="btn danger">Logout</button>
+<div id="toast" class="toast"><span class="tag">OK</span><span class="msg"></span></div>
+
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="dot"></div>
+      <div>
+        <div class="brand-name">GP Secure System</div>
+        <div class="brand-sub">Receptionist Portal</div>
       </div>
     </div>
-  </div>
-
-  <div id="toast" class="toast"><span class="tag">OK</span><span class="msg"></span></div>
-
-  <div class="container">
-    <div class="grid two">
-      <div class="card">
-        <div class="card-h">
-          <h3>Appointments</h3>
-          <div class="actions">
-            <button id="btnList" class="btn secondary">Refresh</button>
-          </div>
+    <ul class="sidebar-nav">
+      <li><button class="nav-link" data-section="appointments">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Appointments
+      </button></li>
+      <li><button class="nav-link" data-section="patients">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Patient Details
+      </button></li>
+      <li><button class="nav-link" data-section="account">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Account
+      </button></li>
+    </ul>
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebarAvatar">R</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-username" id="sidebarUsername">Loading…</div>
+          <div class="sidebar-role" id="sidebarRole">Receptionist</div>
         </div>
-        <div class="card-b">
-          <div class="row">
-            <div class="field">
-              <label>Upcoming only</label>
-              <select id="upcoming">
-                <option value="">No filter</option>
-                <option value="true">Upcoming</option>
-                <option value="false">Past</option>
-              </select>
-            </div>
-            <div class="field" style="min-width:160px; flex:0;">
-              <button id="btnLoad" class="btn">Load</button>
-            </div>
-          </div>
+      </div>
+      <button id="btnLogout" class="btn btn-danger btn-sm btn-full">Sign Out</button>
+    </div>
+  </aside>
 
-          <div style="margin-top:12px" id="apptTable"></div>
+  <!-- Main -->
+  <main class="main-content">
 
-          <details class="raw" id="apptRaw">
-            <summary>Show raw JSON (debug)</summary>
-            <pre></pre>
-          </details>
+    <!-- ======== APPOINTMENTS ======== -->
+    <div id="section-appointments" class="section">
+      <div class="section-header">
+        <h2>All Appointments</h2>
+        <button id="btnApptRefresh" class="btn btn-secondary">Refresh</button>
+      </div>
+
+      <div class="filter-bar">
+        <div class="form-group">
+          <label>Status</label>
+          <select id="filterStatus">
+            <option value="">All statuses</option>
+            <option value="REQUESTED">Requested</option>
+            <option value="CONFIRMED">Confirmed</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>From Date</label>
+          <input id="filterFrom" type="date" />
+        </div>
+        <div class="form-group">
+          <label>To Date</label>
+          <input id="filterTo" type="date" />
+        </div>
+        <div class="form-group" style="flex:0;min-width:auto;">
+          <label>&nbsp;</label>
+          <button id="btnApptFilter" class="btn">Apply Filters</button>
+        </div>
+        <div class="form-group" style="flex:0;min-width:auto;">
+          <label>&nbsp;</label>
+          <button id="btnApptClear" class="btn btn-secondary">Clear</button>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-h">
-          <h3>Reschedule appointment</h3>
-          <span class="pill">PATCH</span>
+      <div id="apptTable"></div>
+    </div>
+
+    <!-- ======== PATIENTS ======== -->
+    <div id="section-patients" class="section">
+      <div class="section-header">
+        <h2>Update Patient Contact Details</h2>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-header"><h3>Find Patient</h3></div>
+        <div class="card-body">
+          <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+            <div class="form-group" style="flex:1;min-width:160px;">
+              <label>Patient ID</label>
+              <input id="patientIdInput" type="number" placeholder="Enter numeric patient ID" />
+            </div>
+            <button id="btnLoadPatient" class="btn" style="margin-bottom:0;">Load Patient</button>
+          </div>
         </div>
-        <div class="card-b">
-          <div class="row">
-            <div class="field">
-              <label>Appointment id</label>
-              <input id="apptId" type="number" placeholder="e.g. 28" />
-            </div>
-            <div class="field">
-              <label>New start time (ISO)</label>
-              <input id="start" placeholder="YYYY-MM-DDTHH:MM:SSZ" />
-            </div>
-            <div class="field">
-              <label>New end time (ISO)</label>
-              <input id="end" placeholder="YYYY-MM-DDTHH:MM:SSZ" />
-            </div>
+      </div>
+
+      <div id="patientEditArea" style="display:none;">
+        <div class="card">
+          <div class="card-header">
+            <h3>Contact Details — <span id="patientEditName">Patient</span></h3>
           </div>
-
-          <div class="row" style="margin-top:10px;">
-            <button id="btnResched" class="btn ok">Reschedule</button>
-          </div>
-
-          <div id="resMessage" class="pill" style="margin-top:10px;">No changes yet.</div>
-
-          <details class="raw" id="resRaw">
-            <summary>Show raw JSON (debug)</summary>
-            <pre></pre>
-          </details>
-
-          <div class="note" style="margin-top:10px;">
-            Tip: You can copy an appointment ID from the appointments table.
+          <div class="card-body" style="display:flex;flex-direction:column;gap:14px;">
+            <div class="form-row">
+              <div class="form-group">
+                <label>First Name</label>
+                <input id="editFirstName" type="text" placeholder="First name" />
+              </div>
+              <div class="form-group">
+                <label>Last Name</label>
+                <input id="editLastName" type="text" placeholder="Last name" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input id="editEmail" type="email" placeholder="email@example.com" />
+            </div>
+            <div class="form-group">
+              <label>Phone</label>
+              <input id="editPhone" type="text" placeholder="+44 7000 000000" />
+            </div>
+            <div class="form-group">
+              <label>Address Line 1</label>
+              <input id="editAddr1" type="text" placeholder="House/flat number and street" />
+            </div>
+            <div class="form-group">
+              <label>Address Line 2 <span class="muted">(optional)</span></label>
+              <input id="editAddr2" type="text" placeholder="Locality, estate, etc." />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>City</label>
+                <input id="editCity" type="text" placeholder="City" />
+              </div>
+              <div class="form-group">
+                <label>Postcode</label>
+                <input id="editPostcode" type="text" placeholder="e.g. SW1A 1AA" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Date of Birth</label>
+              <input id="editDob" type="date" />
+            </div>
+            <div>
+              <button id="btnSavePatient" class="btn btn-success">Save Changes</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- ======== ACCOUNT ======== -->
+    <div id="section-account" class="section">
+      <div class="section-header"><h2>Account Settings</h2></div>
+      <div class="card mfa-card">
+        <div class="card-header"><h3>Two-Factor Authentication</h3></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:16px;">
+          <div class="mfa-status-row">
+            <span class="status-label">MFA Status:</span>
+            <span id="mfaStatus"><span class="badge badge-cancelled">Disabled</span></span>
+          </div>
+
+          <div id="mfaSetupArea">
+            <p class="muted" style="font-size:13px;margin-bottom:12px;">
+              Protect your account with a time-based one-time password (TOTP) authenticator app.
+            </p>
+            <button id="btnMfaSetup" class="btn">Set Up Two-Factor Auth</button>
+
+            <div id="mfaSetupResult" style="display:none;margin-top:20px;flex-direction:column;gap:16px;">
+              <div class="mfa-step">
+                <div class="mfa-step-header">
+                  <span class="mfa-step-num">1</span>
+                  Scan with your authenticator app
+                </div>
+                <div class="mfa-qr-wrap">
+                  <div id="mfaQrContainer"></div>
+                </div>
+                <p class="muted" style="font-size:12px;margin-top:10px;text-align:center;">
+                  Open <strong style="color:var(--text)">Google Authenticator</strong>, <strong style="color:var(--text)">Authy</strong>, or any TOTP app and scan the code above.
+                  On most phones you can also point your camera directly at it.
+                </p>
+              </div>
+
+              <details class="mfa-manual">
+                <summary>Can't scan? Enter the key manually</summary>
+                <div class="mfa-manual-body">
+                  <div class="secret-label">Secret Key</div>
+                  <div class="mfa-secret-row">
+                    <div class="secret-box" id="mfaSecret"></div>
+                    <button id="btnCopySecret" class="btn btn-sm btn-secondary" type="button">Copy</button>
+                  </div>
+                </div>
+              </details>
+
+              <div class="mfa-step">
+                <div class="mfa-step-header">
+                  <span class="mfa-step-num">2</span>
+                  Enter the 6-digit code from your app
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <input id="mfaEnableCode" type="text" inputmode="numeric" maxlength="6"
+                         placeholder="000000" autocomplete="one-time-code" />
+                </div>
+                <button id="btnMfaEnable" class="btn btn-success" style="margin-top:10px;width:100%;">Activate MFA</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="mfaDisableArea" style="display:none;flex-direction:column;gap:12px;">
+            <p class="muted" style="font-size:13px;">MFA is currently active. Enter your authenticator code below to disable it.</p>
+            <div class="form-group">
+              <label>Current Authentication Code</label>
+              <input id="mfaDisableCode" type="text" inputmode="numeric" maxlength="6" placeholder="6-digit code" />
+            </div>
+            <button id="btnMfaDisable" class="btn btn-danger">Disable MFA</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ======== RESCHEDULE MODAL ======== -->
+<div id="modalReschedule" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="rescheduleTitle">Reschedule Appointment</h3>
+      <button class="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="rescheduleId" />
+      <div class="info-box" id="rescheduleInfo" style="margin-bottom:4px;"></div>
+      <div class="form-group">
+        <label>New Start Date &amp; Time</label>
+        <input id="rescheduleStart" type="datetime-local" />
+      </div>
+      <div class="form-group">
+        <label>New End Date &amp; Time</label>
+        <input id="rescheduleEnd" type="datetime-local" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="btnReschedCancel" class="btn btn-secondary">Cancel</button>
+      <button id="btnReschedSave" class="btn btn-success">Save Changes</button>
+    </div>
   </div>
+</div>
 
-  <script src="api.js"></script>
-  <script src="common.js"></script>
-  <script>
-    let me = null;
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="api.js"></script>
+<script src="common.js"></script>
+<script>
+  let me = null;
+  let currentPatientId = null;
 
-    async function loadAppointments(){
-      try{
-        const up = $("upcoming").value;
-        const qs = up ? `?upcoming=${encodeURIComponent(up)}` : "";
-        const data = await apiFetch(`/api/appointments/${qs}`);
+  (async () => {
+    me = await requireAuth(["RECEPTIONIST"]);
+    if (!me) return;
+    mountSidebar(me);
+    initNav("appointments");
+    initModalClose("modalReschedule");
 
-        renderAppointmentsTable("apptTable", data, { showPatient:true, showGp:true });
-        setRawJson("apptRaw", data);
+    $("btnReschedCancel").onclick = () => closeModal("modalReschedule");
+    $("btnReschedSave").onclick   = saveReschedule;
+    $("btnApptFilter").onclick    = loadAppointments;
+    $("btnApptRefresh").onclick   = loadAppointments;
+    $("btnApptClear").onclick     = () => {
+      $("filterStatus").value = "";
+      $("filterFrom").value   = "";
+      $("filterTo").value     = "";
+      loadAppointments();
+    };
 
-        showToast("Appointments loaded.", "ok");
-      }catch(e){
-        showToast(e.message, "err");
-        $("apptTable").innerHTML = `<span class="pill">Failed to load appointments.</span>`;
-      }
-    }
+    $("btnLoadPatient").onclick  = loadPatient;
+    $("btnSavePatient").onclick  = savePatient;
 
-    async function reschedule(){
-      try{
-        const id = $("apptId").value.trim();
-        const body = {
-          start_time: $("start").value.trim(),
-          end_time: $("end").value.trim()
-        };
-        if (!id || !body.start_time || !body.end_time) {
-          showToast("Enter appointment id, start time and end time.", "warn");
-          return;
+    setupMfa();
+    await loadAppointments();
+  })();
+
+  // ---- Appointments ----
+  async function loadAppointments() {
+    const p = new URLSearchParams();
+    const status = $("filterStatus").value;
+    const from   = $("filterFrom").value;
+    const to     = $("filterTo").value;
+    if (status) p.set("status", status); // Note: backend doesn't filter by status directly but we filter client-side
+    if (from)   p.set("date_from", from);
+    if (to)     p.set("date_to", to);
+    const qs = p.toString() ? `?${p}` : "";
+    try {
+      let appts = await apiFetch(`/api/appointments/${qs}`);
+      // Client-side status filter since backend doesn't support it via query param
+      if (status) appts = appts.filter(a => a.status === status);
+      renderAppointmentsTable("apptTable", appts, {
+        showPatient: true,
+        showGp: true,
+        actions: a => {
+          const s = a.status.toUpperCase();
+          let btns = "";
+          if (s === "REQUESTED")
+            btns += `<button class="btn btn-sm btn-success" onclick="confirmAppt(${a.id})">Confirm</button>`;
+          if (s !== "CANCELLED" && s !== "COMPLETED")
+            btns += `<button class="btn btn-sm btn-danger" onclick="cancelAppt(${a.id})">Cancel</button>`;
+          if (s !== "CANCELLED" && s !== "COMPLETED")
+            btns += `<button class="btn btn-sm btn-secondary" onclick="openReschedule(${a.id}, '${escapeHtml(fmtDate(a.start_time))}')">Reschedule</button>`;
+          return btns || `<span class="badge badge-${s.toLowerCase()}">${s}</span>`;
         }
+      });
+    } catch(e) { showToast(e.message, "err"); }
+  }
 
-        const data = await apiFetch(`/api/appointments/${encodeURIComponent(id)}/`, { method:"PATCH", body });
-        $("resMessage").textContent = `Rescheduled #${data.id}: ${fmtDate(data.start_time)} → ${fmtDate(data.end_time)}`;
-        setRawJson("resRaw", data);
+  async function confirmAppt(id) {
+    try {
+      await apiFetch(`/api/appointments/${id}/`, { method: "PATCH", body: { status: "CONFIRMED" } });
+      showToast("Appointment confirmed.", "ok");
+      await loadAppointments();
+    } catch(e) { showToast(e.message, "err"); }
+  }
 
-        showToast("Rescheduled.", "ok");
-        await loadAppointments();
-      }catch(e){
-        showToast(e.message, "err");
-        $("resMessage").textContent = "Reschedule failed.";
-      }
+  async function cancelAppt(id) {
+    if (!confirm("Cancel this appointment?")) return;
+    try {
+      await apiFetch(`/api/appointments/${id}/`, { method: "PATCH", body: { status: "CANCELLED" } });
+      showToast("Appointment cancelled.", "ok");
+      await loadAppointments();
+    } catch(e) { showToast(e.message, "err"); }
+  }
+
+  // ---- Reschedule Modal ----
+  function openReschedule(id, label) {
+    $("rescheduleId").value   = id;
+    $("rescheduleTitle").textContent = `Reschedule Appointment #${id}`;
+    $("rescheduleInfo").textContent  = `Current time: ${label}`;
+    $("rescheduleStart").value = "";
+    $("rescheduleEnd").value   = "";
+    openModal("modalReschedule");
+  }
+
+  async function saveReschedule() {
+    const id    = $("rescheduleId").value;
+    const start = $("rescheduleStart").value;
+    const end   = $("rescheduleEnd").value;
+    if (!start || !end) { showToast("Select both start and end times.", "warn"); return; }
+    // Convert datetime-local to ISO 8601 with Z
+    const startISO = new Date(start).toISOString();
+    const endISO   = new Date(end).toISOString();
+    try {
+      $("btnReschedSave").disabled = true;
+      await apiFetch(`/api/appointments/${id}/`, {
+        method: "PATCH",
+        body: { start_time: startISO, end_time: endISO }
+      });
+      showToast("Appointment rescheduled.", "ok");
+      closeModal("modalReschedule");
+      await loadAppointments();
+    } catch(e) {
+      showToast(e.message, "err");
+    } finally {
+      $("btnReschedSave").disabled = false;
+    }
+  }
+
+  // ---- Patient contact update ----
+  async function loadPatient() {
+    const idVal = $("patientIdInput").value.trim();
+    if (!idVal) { showToast("Enter a patient ID.", "warn"); return; }
+    currentPatientId = idVal;
+    // The only way to retrieve patient info is through the update endpoint response.
+    // We'll show a blank form and let the receptionist fill in what needs changing.
+    $("patientEditName").textContent = `Patient #${idVal}`;
+    $("patientEditArea").style.display = "block";
+    // Clear all fields ready for input
+    ["editFirstName","editLastName","editEmail","editPhone","editAddr1","editAddr2","editCity","editPostcode","editDob"]
+      .forEach(id => $(id).value = "");
+    showToast(`Loaded patient #${idVal}. Fill in the fields you want to update and save.`, "ok");
+  }
+
+  async function savePatient() {
+    if (!currentPatientId) return;
+    // Only send fields that have been filled in
+    const body = {};
+    const firstName = $("editFirstName").value.trim();
+    const lastName  = $("editLastName").value.trim();
+    const email     = $("editEmail").value.trim();
+    const phone     = $("editPhone").value.trim();
+    const addr1     = $("editAddr1").value.trim();
+    const addr2     = $("editAddr2").value.trim();
+    const city      = $("editCity").value.trim();
+    const postcode  = $("editPostcode").value.trim();
+    const dob       = $("editDob").value;
+
+    if (firstName) body.first_name   = firstName;
+    if (lastName)  body.last_name    = lastName;
+    if (email)     body.email        = email;
+    if (phone)     body.phone        = phone;
+    if (addr1)     body.address_line1 = addr1;
+    if (addr2)     body.address_line2 = addr2;
+    if (city)      body.city         = city;
+    if (postcode)  body.postcode     = postcode;
+    if (dob)       body.date_of_birth = dob;
+
+    if (!Object.keys(body).length) {
+      showToast("Fill in at least one field to update.", "warn");
+      return;
     }
 
-    (async () => {
-      me = await requireAuth(["RECEPTIONIST", "PRACTICE_MANAGER"]); // staff can access
-      if (!me) return;
-      mountTopbar(me);
+    try {
+      $("btnSavePatient").disabled = true;
+      const res = await apiFetch(`/api/accounts/patients/${currentPatientId}/contact/`, {
+        method: "PATCH", body
+      });
+      showToast(`Contact details updated for ${res.username}.`, "ok");
+      // Refresh the displayed name
+      $("patientEditName").textContent = `${res.first_name || ""} ${res.last_name || ""}`.trim() || `Patient #${currentPatientId}`;
+    } catch(e) {
+      showToast(e.message, "err");
+    } finally {
+      $("btnSavePatient").disabled = false;
+    }
+  }
 
-      $("btnList").onclick = loadAppointments;
-      $("btnLoad").onclick = loadAppointments;
-      $("btnResched").onclick = reschedule;
-
-      await loadAppointments();
-    })();
-  </script>
+  // ---- MFA (handled by setupMfa() in common.js) ----
+</script>
 </body>
 </html>

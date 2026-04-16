@@ -1,22 +1,25 @@
-const API_BASE = ""; // same origin
+/* =============================================
+   GP Secure System — API Client
+   ============================================= */
 
-function $(id){ return document.getElementById(id); }
+const API_BASE = "";
 
-function getToken(){
-  return localStorage.getItem("jwt_access") || "";
-}
-function setToken(token){
-  localStorage.setItem("jwt_access", token);
-}
-function clearToken(){
+function $(id) { return document.getElementById(id); }
+
+/* ---- Token helpers ---- */
+function getToken() { return localStorage.getItem("jwt_access") || ""; }
+function setToken(t) { localStorage.setItem("jwt_access", t); }
+function clearToken() {
   localStorage.removeItem("jwt_access");
   localStorage.removeItem("me_role");
   localStorage.removeItem("me_username");
   localStorage.removeItem("me_id");
+  localStorage.removeItem("me_mfa");
 }
 
-async function apiFetch(path, opts = {}){
-  const headers = opts.headers ? {...opts.headers} : {};
+/* ---- Core fetch ---- */
+async function apiFetch(path, opts = {}) {
+  const headers = { ...(opts.headers || {}) };
   headers["Accept"] = "application/json";
 
   const token = getToken();
@@ -30,7 +33,9 @@ async function apiFetch(path, opts = {}){
   const res = await fetch(API_BASE + path, {
     method: opts.method || "GET",
     headers,
-    body: hasBody ? (opts.body instanceof FormData ? opts.body : JSON.stringify(opts.body)) : undefined,
+    body: hasBody
+      ? opts.body instanceof FormData ? opts.body : JSON.stringify(opts.body)
+      : undefined,
   });
 
   let data = null;
@@ -52,63 +57,60 @@ async function apiFetch(path, opts = {}){
   return data;
 }
 
-async function fetchMe(){
+/* ---- /me ---- */
+async function fetchMe() {
   const me = await apiFetch("/api/accounts/me/");
   localStorage.setItem("me_role", me.role || "");
   localStorage.setItem("me_username", me.username || "");
   localStorage.setItem("me_id", String(me.id ?? ""));
+  localStorage.setItem("me_mfa", me.mfa_enabled ? "1" : "0");
   return me;
 }
 
-function go(url){
-  window.location.href = url;
-}
+/* ---- Navigation ---- */
+function go(url) { window.location.href = url; }
 
-function roleHome(role){
+function roleHome(role) {
   const r = String(role || "").toUpperCase();
-  if (r === "PATIENT") return "patient.html";
-  if (r === "GP") return "gp.html";
-  if (r === "RECEPTIONIST") return "receptionist.html";
+  if (r === "PATIENT")          return "patient.html";
+  if (r === "GP")               return "gp.html";
+  if (r === "RECEPTIONIST")     return "receptionist.html";
   if (r === "PRACTICE_MANAGER") return "manager.html";
   return "index.html";
 }
 
-async function requireAuth(allowedRoles = null){
-  const token = getToken();
-  if (!token) go("index.html");
+/* ---- Auth guard ---- */
+async function requireAuth(allowedRoles = null) {
+  if (!getToken()) { go("index.html"); return null; }
 
   let me;
-  try {
-    me = await fetchMe();
-  } catch (e) {
-    clearToken();
-    go("index.html");
-    return null;
-  }
+  try { me = await fetchMe(); }
+  catch (e) { clearToken(); go("index.html"); return null; }
 
-  if (allowedRoles && Array.isArray(allowedRoles) && allowedRoles.length) {
-    const ok = allowedRoles.map(x => String(x).toUpperCase()).includes(String(me.role).toUpperCase());
-    if (!ok) {
-      // wrong role -> send to their own page
+  if (allowedRoles && allowedRoles.length) {
+    const allowed = allowedRoles.map(x => String(x).toUpperCase());
+    if (!allowed.includes(String(me.role || "").toUpperCase())) {
       go(roleHome(me.role));
       return null;
     }
   }
-
   return me;
 }
 
-function mountTopbar(me){
-  const role = (me?.role || localStorage.getItem("me_role") || "").toUpperCase();
+/* ---- Sidebar user block ---- */
+function mountSidebar(me) {
   const username = me?.username || localStorage.getItem("me_username") || "user";
+  const role     = me?.role     || localStorage.getItem("me_role")     || "";
 
-  const roleText = role ? `${username} (${role})` : username;
-  const el = $("whoami");
-  if (el) el.textContent = roleText;
+  const avatarEl = $("sidebarAvatar");
+  if (avatarEl) avatarEl.textContent = username.charAt(0).toUpperCase();
 
-  const btnSwitch = $("btnSwitch");
-  if (btnSwitch) btnSwitch.onclick = () => { clearToken(); go("index.html"); };
+  const usernameEl = $("sidebarUsername");
+  if (usernameEl) usernameEl.textContent = username;
 
-  const btnLogout = $("btnLogout");
-  if (btnLogout) btnLogout.onclick = () => { clearToken(); go("index.html"); };
+  const roleEl = $("sidebarRole");
+  if (roleEl) roleEl.textContent = role.replace("_", " ");
+
+  const logoutBtn = $("btnLogout");
+  if (logoutBtn) logoutBtn.onclick = () => { clearToken(); go("index.html"); };
 }

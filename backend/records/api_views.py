@@ -1,13 +1,10 @@
-from rest_framework import generics
-from rest_framework.exceptions import PermissionDenied
-from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied, NotFound
-from audits.utils import log_event
 from django.conf import settings
 from django.db.models.expressions import RawSQL
-
+from rest_framework import generics
+from rest_framework.exceptions import PermissionDenied, NotFound
 
 from accounts.models import User
+from audits.utils import log_event
 from .models import MedicalRecord, ClinicalEntry
 from .serializers import MedicalRecordSerializer, ClinicalEntrySerializer, gp_is_assigned_to_patient
 
@@ -15,16 +12,12 @@ from .serializers import MedicalRecordSerializer, ClinicalEntrySerializer, gp_is
 def can_read_record(user: User, record: MedicalRecord) -> bool:
     if not user.is_authenticated:
         return False
-
     if user.is_superuser:
         return True
-
     if user.role == User.Role.PATIENT:
         return record.patient_id == user.id
-
     if user.role == User.Role.GP:
         return gp_is_assigned_to_patient(user, record.patient)
-
     return False  # receptionist/manager denied
 
 
@@ -41,10 +34,8 @@ class MedicalRecordListView(generics.ListAPIView):
             return MedicalRecord.objects.filter(patient=u)
 
         if u.role == User.Role.GP:
-            # Records for patients assigned to this GP
             return MedicalRecord.objects.filter(patient__patient_profile__assigned_gp__user=u)
 
-        # Staff cannot view records list
         raise PermissionDenied("You do not have access to medical records.")
 
 
@@ -58,7 +49,6 @@ class MedicalRecordMeView(generics.RetrieveAPIView):
         try:
             return u.medical_record
         except MedicalRecord.DoesNotExist:
-            # Should not happen if signals work, but safe fallback
             return MedicalRecord.objects.create(patient=u)
 
 
@@ -86,24 +76,20 @@ class RecordEntriesListCreateView(generics.ListCreateAPIView):
             raise PermissionDenied("You do not have access to this record.")
         return record
 
-
     def get_queryset(self):
         record = self.get_record()
-
-        qs = ClinicalEntry.objects.filter(record=record).select_related("created_by")
-        qs = qs.annotate(
+        return ClinicalEntry.objects.filter(record=record).select_related("created_by").annotate(
             content_plain=RawSQL(
                 "pgp_sym_decrypt(content_enc, %s)::text",
                 (settings.PGCRYPTO_KEY,),
             )
         )
-        return qs
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
         ctx["record"] = self.get_record()
         return ctx
-    
+
     def perform_create(self, serializer):
         entry = serializer.save()
         log_event(
@@ -119,7 +105,6 @@ class RecordEntriesListCreateView(generics.ListCreateAPIView):
         )
 
 
-
 class ClinicalEntryDetailView(generics.RetrieveUpdateAPIView):
     serializer_class = ClinicalEntrySerializer
     queryset = ClinicalEntry.objects.select_related(
@@ -133,8 +118,7 @@ class ClinicalEntryDetailView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         entry = super().get_object()
-        record = entry.record
-        if not can_read_record(self.request.user, record):
+        if not can_read_record(self.request.user, entry.record):
             raise PermissionDenied("You do not have access to this record.")
         return entry
 
@@ -143,7 +127,7 @@ class ClinicalEntryDetailView(generics.RetrieveUpdateAPIView):
         entry = self.get_object()
         ctx["record"] = entry.record
         return ctx
-    
+
     def perform_update(self, serializer):
         entry = serializer.save()
         log_event(
@@ -157,4 +141,3 @@ class ClinicalEntryDetailView(generics.RetrieveUpdateAPIView):
                 "type": entry.type,
             },
         )
-
