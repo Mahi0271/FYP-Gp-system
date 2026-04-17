@@ -81,9 +81,8 @@ class AppointmentSerializer(serializers.ModelSerializer):
             if end_time <= start_time:
                 raise serializers.ValidationError({"end_time": "end_time must be after start_time."})
 
-        # Optional: block booking in the past (uncomment if you want)
-        # if start_time and start_time < timezone.now():
-        #     raise serializers.ValidationError({"start_time": "start_time cannot be in the past."})
+        if instance is None and start_time and start_time < timezone.now():
+            raise serializers.ValidationError({"start_time": "Appointments cannot be booked in the past."})
 
         # ----- STATUS TRANSITION RULES -----
         new_status = attrs.get("status", None)

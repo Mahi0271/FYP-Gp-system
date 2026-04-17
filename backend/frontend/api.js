@@ -7,10 +7,15 @@ const API_BASE = "";
 function $(id) { return document.getElementById(id); }
 
 /* ---- Token helpers ---- */
-function getToken() { return localStorage.getItem("jwt_access") || ""; }
-function setToken(t) { localStorage.setItem("jwt_access", t); }
+function getToken()        { return localStorage.getItem("jwt_access")   || ""; }
+function getRefreshToken() { return localStorage.getItem("jwt_refresh")  || ""; }
+function setToken(access, refresh) {
+  localStorage.setItem("jwt_access", access);
+  if (refresh !== undefined) localStorage.setItem("jwt_refresh", refresh);
+}
 function clearToken() {
   localStorage.removeItem("jwt_access");
+  localStorage.removeItem("jwt_refresh");
   localStorage.removeItem("me_role");
   localStorage.removeItem("me_username");
   localStorage.removeItem("me_id");
@@ -109,8 +114,19 @@ function mountSidebar(me) {
   if (usernameEl) usernameEl.textContent = username;
 
   const roleEl = $("sidebarRole");
-  if (roleEl) roleEl.textContent = role.replace("_", " ");
+  if (roleEl) roleEl.textContent = role.replace("_", " ").toLowerCase();
 
   const logoutBtn = $("btnLogout");
-  if (logoutBtn) logoutBtn.onclick = () => { clearToken(); go("index.html"); };
+  if (logoutBtn) logoutBtn.onclick = async () => {
+    const refresh = getRefreshToken();
+    if (refresh) {
+      try { await apiFetch("/api/accounts/logout/", { method: "POST", body: { refresh } }); }
+      catch (_) { /* blacklist failed — clear locally anyway */ }
+    }
+    clearToken();
+    go("index.html");
+  };
+
+  // Hook up shell controls defined in common.js
+  if (typeof mountShell === "function") mountShell();
 }

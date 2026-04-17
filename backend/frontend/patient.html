@@ -3,41 +3,49 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Patient Portal — GP Secure System</title>
+  <title>Patient portal — GP Secure System</title>
+  <link rel="preconnect" href="https://rsms.me/">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 <div id="toast" class="toast"><span class="tag">OK</span><span class="msg"></span></div>
 
-<div class="layout">
+<div class="app">
 
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-brand">
-      <div class="dot"></div>
-      <div>
-        <div class="brand-name">GP Secure System</div>
-        <div class="brand-sub">Patient Portal</div>
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+      </div>
+      <div class="brand-info">
+        <div class="brand-name">GP Secure</div>
+        <div class="brand-sub">Patient portal</div>
       </div>
     </div>
+
     <ul class="sidebar-nav">
+      <div class="sidebar-nav-label">Main</div>
       <li><button class="nav-link" data-section="dashboard">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-        Dashboard
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        <span class="label">Overview</span>
       </button></li>
       <li><button class="nav-link" data-section="appointments">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        Appointments
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span class="label">Appointments</span>
       </button></li>
       <li><button class="nav-link" data-section="record">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        Medical Record
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        <span class="label">Medical record</span>
       </button></li>
+      <div class="sidebar-nav-label">Settings</div>
       <li><button class="nav-link" data-section="account">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        Account
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="label">Account</span>
       </button></li>
     </ul>
+
     <div class="sidebar-footer">
       <div class="sidebar-user">
         <div class="sidebar-avatar" id="sidebarAvatar">P</div>
@@ -46,43 +54,82 @@
           <div class="sidebar-role" id="sidebarRole">Patient</div>
         </div>
       </div>
-      <button id="btnLogout" class="btn btn-danger btn-sm btn-full">Sign Out</button>
+      <button id="btnLogout" class="btn btn-secondary btn-sm btn-full">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span class="btn-label">Sign out</span>
+      </button>
     </div>
   </aside>
 
   <!-- Main -->
-  <main class="main-content">
+  <main class="main">
+    <!-- Topbar -->
+    <header class="topbar">
+      <button id="btnMenu" class="btn-icon" aria-label="Toggle menu">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+      </button>
+      <div class="topbar-title" id="topbarTitle">Overview</div>
+      <div class="topbar-actions">
+        <button id="btnTheme" class="btn-icon theme-toggle" aria-label="Toggle theme">
+          <span class="sun-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg></span>
+          <span class="moon-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+        </button>
+      </div>
+    </header>
+
+    <div class="main-inner">
 
     <!-- ======== DASHBOARD ======== -->
     <div id="section-dashboard" class="section">
       <div class="section-header">
         <div>
-          <h2 id="welcomeMsg">Welcome</h2>
-          <p class="muted">Here's a summary of your health portal.</p>
+          <h2 id="welcomeMsg">Welcome back</h2>
+          <p class="sub">Here's a snapshot of your health portal.</p>
         </div>
       </div>
 
       <div class="stat-grid">
-        <div class="stat-card brand">
-          <div class="stat-label">Upcoming</div>
-          <div class="stat-value" id="statUpcoming">—</div>
-          <div class="stat-sub">Appointments</div>
-        </div>
         <div class="stat-card">
-          <div class="stat-label">Total</div>
+          <div class="stat-head">
+            <div class="stat-label">Upcoming</div>
+            <div class="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+          </div>
+          <div class="stat-value" id="statUpcoming">—</div>
+          <div class="stat-sub">Appointments scheduled</div>
+        </div>
+        <div class="stat-card plain">
+          <div class="stat-head">
+            <div class="stat-label">All-time total</div>
+            <div class="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+          </div>
           <div class="stat-value" id="statTotal">—</div>
-          <div class="stat-sub">All appointments</div>
+          <div class="stat-sub">Appointments on record</div>
         </div>
         <div class="stat-card ok">
-          <div class="stat-label">Assigned GP</div>
+          <div class="stat-head">
+            <div class="stat-label">Your GP</div>
+            <div class="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+          </div>
           <div class="stat-value" id="statGp">—</div>
-          <div class="stat-sub">Your doctor</div>
+          <div class="stat-sub">Primary care assignment</div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-header"><h3>Recent Appointments</h3></div>
-        <div class="card-body">
+        <div class="card-header">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Recent appointments
+          </h3>
+          <button class="btn btn-secondary btn-sm" onclick="showSection('appointments')">View all →</button>
+        </div>
+        <div class="card-body p-0">
           <div id="dashApptTable"></div>
         </div>
       </div>
@@ -91,10 +138,19 @@
     <!-- ======== APPOINTMENTS ======== -->
     <div id="section-appointments" class="section">
       <div class="section-header">
-        <h2>My Appointments</h2>
+        <div>
+          <h2>Appointments</h2>
+          <p class="sub">Manage your bookings and schedule.</p>
+        </div>
         <div class="actions">
-          <button id="btnBookOpen" class="btn">+ Book Appointment</button>
-          <button id="btnApptRefresh" class="btn btn-secondary">Refresh</button>
+          <button id="btnApptRefresh" class="btn btn-secondary btn-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Refresh
+          </button>
+          <button id="btnBookOpen" class="btn btn-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Book appointment
+          </button>
         </div>
       </div>
 
@@ -110,19 +166,35 @@
     <!-- ======== MEDICAL RECORD ======== -->
     <div id="section-record" class="section">
       <div class="section-header">
-        <h2>My Medical Record</h2>
-        <button id="btnRecordRefresh" class="btn btn-secondary">Refresh</button>
+        <div>
+          <h2>Medical record</h2>
+          <p class="sub">Your clinical notes, diagnoses, and prescriptions.</p>
+        </div>
+        <button id="btnRecordRefresh" class="btn btn-secondary btn-sm">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Refresh
+        </button>
       </div>
 
       <div class="card" style="margin-bottom:20px">
-        <div class="card-header"><h3>Record Details</h3></div>
+        <div class="card-header">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 8h3"/><path d="M15 12h3"/><path d="M7 16h10"/></svg>
+            Record details
+          </h3>
+        </div>
         <div class="card-body" id="recordMeta">
           <div class="empty-state"><div>Loading…</div></div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-header"><h3>Clinical Entries</h3></div>
+        <div class="card-header">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Clinical entries
+          </h3>
+        </div>
         <div class="card-body">
           <div id="entryCards"></div>
         </div>
@@ -132,22 +204,34 @@
     <!-- ======== ACCOUNT ======== -->
     <div id="section-account" class="section">
       <div class="section-header">
-        <h2>Account Settings</h2>
+        <div>
+          <h2>Account</h2>
+          <p class="sub">Security settings for your patient account.</p>
+        </div>
       </div>
 
       <div class="card mfa-card">
-        <div class="card-header"><h3>Two-Factor Authentication</h3></div>
+        <div class="card-header">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Two-factor authentication
+          </h3>
+        </div>
         <div class="card-body" style="display:flex;flex-direction:column;gap:16px;">
+
           <div class="mfa-status-row">
-            <span class="status-label">MFA Status:</span>
-            <span id="mfaStatus"><span class="badge badge-cancelled">Disabled</span></span>
+            <span class="status-label">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              Authenticator status
+            </span>
+            <span id="mfaStatus"><span class="badge badge-disabled">Disabled</span></span>
           </div>
 
           <div id="mfaSetupArea">
-            <p class="muted" style="font-size:13px;margin-bottom:12px;">
+            <p class="muted small" style="margin-bottom:12px;">
               Protect your account with a time-based one-time password (TOTP) authenticator app.
             </p>
-            <button id="btnMfaSetup" class="btn">Set Up Two-Factor Auth</button>
+            <button id="btnMfaSetup" class="btn">Set up two-factor auth</button>
 
             <div id="mfaSetupResult" style="display:none;margin-top:20px;flex-direction:column;gap:16px;">
               <div class="mfa-step">
@@ -158,16 +242,15 @@
                 <div class="mfa-qr-wrap">
                   <div id="mfaQrContainer"></div>
                 </div>
-                <p class="muted" style="font-size:12px;margin-top:10px;text-align:center;">
-                  Open <strong style="color:var(--text)">Google Authenticator</strong>, <strong style="color:var(--text)">Authy</strong>, or any TOTP app and scan the code above.
-                  On most phones you can also point your camera directly at it.
+                <p class="muted small" style="margin-top:10px;text-align:center;">
+                  Open <strong style="color:var(--fg)">Google Authenticator</strong>, <strong style="color:var(--fg)">Authy</strong>, or any TOTP app and scan the code.
                 </p>
               </div>
 
               <details class="mfa-manual">
                 <summary>Can't scan? Enter the key manually</summary>
                 <div class="mfa-manual-body">
-                  <div class="secret-label">Secret Key</div>
+                  <div class="secret-label">Secret key</div>
                   <div class="mfa-secret-row">
                     <div class="secret-box" id="mfaSecret"></div>
                     <button id="btnCopySecret" class="btn btn-sm btn-secondary" type="button">Copy</button>
@@ -182,55 +265,65 @@
                 </div>
                 <div class="form-group" style="margin-bottom:0;">
                   <input id="mfaEnableCode" type="text" inputmode="numeric" maxlength="6"
-                         placeholder="000000" autocomplete="one-time-code" />
+                         placeholder="000000" autocomplete="one-time-code"
+                         style="font-size:18px;letter-spacing:.22em;text-align:center;font-family:'JetBrains Mono',monospace;" />
                 </div>
-                <button id="btnMfaEnable" class="btn btn-success" style="margin-top:10px;width:100%;">Activate MFA</button>
+                <button id="btnMfaEnable" class="btn btn-success" style="margin-top:12px;width:100%;">Activate MFA</button>
               </div>
             </div>
           </div>
 
           <div id="mfaDisableArea" style="display:none;flex-direction:column;gap:12px;">
-            <p class="muted" style="font-size:13px;">MFA is currently active. Enter your authenticator code below to disable it.</p>
+            <div class="warn-box">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <div>MFA is currently active. Enter your authenticator code below to disable it.</div>
+            </div>
             <div class="form-group">
-              <label>Current Authentication Code</label>
+              <label for="mfaDisableCode">Current authentication code</label>
               <input id="mfaDisableCode" type="text" inputmode="numeric" maxlength="6" placeholder="6-digit code" />
             </div>
-            <button id="btnMfaDisable" class="btn btn-danger">Disable MFA</button>
+            <div>
+              <button id="btnMfaDisable" class="btn btn-danger">Disable MFA</button>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
+    </div><!-- main-inner -->
   </main>
-</div><!-- end layout -->
+</div>
 
 <!-- ======== BOOK APPOINTMENT MODAL ======== -->
 <div id="modalBook" class="modal-overlay">
   <div class="modal">
     <div class="modal-header">
-      <h3>Book an Appointment</h3>
-      <button class="modal-close">✕</button>
+      <h3>Book an appointment</h3>
+      <button class="modal-close" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
     <div class="modal-body">
       <div class="form-group">
-        <label>Select Date</label>
+        <label for="bookDate">Select date</label>
         <input id="bookDate" type="date" />
       </div>
-      <button id="btnFindSlots" class="btn">Find Available Slots</button>
+      <button id="btnFindSlots" class="btn">Find available slots</button>
       <div id="slotsArea" style="display:none;flex-direction:column;gap:12px;">
         <div id="slotGrid" class="slot-grid"></div>
         <div class="form-group">
-          <label>Reason for Visit <span class="muted">(optional)</span></label>
+          <label for="bookReason">Reason for visit <span class="muted small">(optional)</span></label>
           <input id="bookReason" type="text" placeholder="e.g. Recurring headache" />
         </div>
       </div>
       <div id="noGpMsg" class="warn-box" style="display:none">
-        We couldn't detect your assigned GP. Please book through the reception or ensure you have at least one existing appointment.
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div>We couldn't detect your assigned GP. Please contact reception or ensure you have at least one existing appointment.</div>
       </div>
     </div>
     <div class="modal-footer">
       <button id="btnBookCancel" class="btn btn-secondary">Cancel</button>
-      <button id="btnBookConfirm" class="btn btn-success" disabled>Confirm Booking</button>
+      <button id="btnBookConfirm" class="btn btn-success" disabled>Confirm booking</button>
     </div>
   </div>
 </div>
@@ -244,7 +337,6 @@
   let assignedGpId = null;
   let selectedSlot = null;
 
-  // ---- Init ----
   (async () => {
     me = await requireAuth(["PATIENT"]);
     if (!me) return;
@@ -258,23 +350,17 @@
     setupMfa();
   })();
 
-  // ---- Appointments ----
   async function loadAppointments() {
     try {
       allAppts = await apiFetch("/api/appointments/");
-
-      // Stats
       const now = new Date();
       const upcoming = allAppts.filter(a => new Date(a.start_time) >= now && a.status !== "CANCELLED");
       $("statUpcoming").textContent = upcoming.length;
       $("statTotal").textContent    = allAppts.length;
       $("statGp").textContent       = assignedGpId ? `GP #${assignedGpId}` : "—";
-
       renderApptTable("all");
       renderAppointmentsTable("dashApptTable", allAppts.slice(0, 5), { showGp: true });
-    } catch(e) {
-      showToast(e.message, "err");
-    }
+    } catch(e) { showToast(e.message, "err"); }
   }
 
   function renderApptTable(filter) {
@@ -287,8 +373,8 @@
       showGp: true,
       actions: a => {
         const s = a.status.toUpperCase();
-        if (s === "COMPLETED" || s === "CANCELLED") return `<span class="badge badge-${s.toLowerCase()}">${s}</span>`;
-        return `<button class="btn btn-sm btn-danger" onclick="cancelAppt(${a.id})">Cancel</button>`;
+        if (s === "COMPLETED" || s === "CANCELLED") return `<span class="small td-muted">—</span>`;
+        return `<button class="btn btn-sm btn-secondary" onclick="cancelAppt(${a.id})">Cancel</button>`;
       }
     });
   }
@@ -302,10 +388,9 @@
     } catch(e) { showToast(e.message, "err"); }
   }
 
-  // Tab filters
   document.addEventListener("click", e => {
-    if (e.target.classList.contains("tab-filter")) {
-      document.querySelectorAll(".tab-filter").forEach(b => b.classList.remove("active"));
+    if (e.target.classList.contains("tab-filter") && $("section-appointments").classList.contains("active")) {
+      document.querySelectorAll("#section-appointments .tab-filter").forEach(b => b.classList.remove("active"));
       e.target.classList.add("active");
       renderApptTable(e.target.dataset.filter);
     }
@@ -313,7 +398,6 @@
 
   $("btnApptRefresh").onclick = loadAppointments;
 
-  // ---- Book Appointment Modal ----
   $("btnBookOpen").onclick = () => {
     selectedSlot = null;
     $("bookDate").value = todayISO();
@@ -323,7 +407,7 @@
     $("slotGrid").innerHTML       = "";
     $("btnBookConfirm").disabled  = true;
     if (!assignedGpId) {
-      $("noGpMsg").style.display = "block";
+      $("noGpMsg").style.display = "flex";
       $("btnFindSlots").disabled = true;
     } else {
       $("btnFindSlots").disabled = false;
@@ -341,9 +425,8 @@
       $("btnFindSlots").textContent = "Searching…";
       const data = await apiFetch(`/api/appointments/availability/?date=${encodeURIComponent(date)}&gp=${assignedGpId}`);
       const slots = data.available || [];
-
       if (!slots.length) {
-        $("slotGrid").innerHTML = `<div class="empty-state"><div>No available slots on this date.</div></div>`;
+        $("slotGrid").innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="empty-title">No available slots on this date</div></div>`;
       } else {
         $("slotGrid").innerHTML = slots.map((s, i) =>
           `<button class="slot-btn" data-idx="${i}">${fmtTime(s.start_time)}</button>`
@@ -362,7 +445,7 @@
       showToast(e.message, "err");
     } finally {
       $("btnFindSlots").disabled = false;
-      $("btnFindSlots").textContent = "Find Available Slots";
+      $("btnFindSlots").textContent = "Find available slots";
     }
   };
 
@@ -387,29 +470,24 @@
     }
   };
 
-  // ---- Medical Record ----
   async function loadRecord() {
     try {
       const rec = await apiFetch("/api/records/me/");
       $("recordMeta").innerHTML = `
-        <table style="width:auto">
-          <tbody>
-            <tr><td class="muted" style="padding:6px 16px 6px 0">Record ID</td><td>#${escapeHtml(String(rec.id))}</td></tr>
-            <tr><td class="muted" style="padding:6px 16px 6px 0">Patient</td><td>${escapeHtml(rec.patient_username || "—")}</td></tr>
-            <tr><td class="muted" style="padding:6px 16px 6px 0">Created</td><td>${fmtDate(rec.created_at)}</td></tr>
-            <tr><td class="muted" style="padding:6px 16px 6px 0">Updated</td><td>${fmtDate(rec.updated_at)}</td></tr>
-          </tbody>
-        </table>`;
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+          <div><div class="small muted">Record ID</div><div class="td-primary">#${escapeHtml(String(rec.id))}</div></div>
+          <div><div class="small muted">Patient</div><div class="td-primary">${escapeHtml(rec.patient_username || "—")}</div></div>
+          <div><div class="small muted">Created</div><div class="td-primary">${fmtDate(rec.created_at)}</div></div>
+          <div><div class="small muted">Last updated</div><div class="td-primary">${fmtDate(rec.updated_at)}</div></div>
+        </div>`;
       const entries = await apiFetch(`/api/records/${rec.id}/entries/`);
       renderEntryCards("entryCards", entries);
     } catch(e) {
       showToast(e.message, "err");
-      $("recordMeta").innerHTML = `<div class="empty-state">Failed to load record.</div>`;
+      $("recordMeta").innerHTML = `<div class="empty-state"><div class="empty-title">Failed to load record</div></div>`;
     }
   }
   $("btnRecordRefresh").onclick = loadRecord;
-
-  // ---- MFA (handled by setupMfa() in common.js) ----
 </script>
 </body>
 </html>

@@ -1,4 +1,8 @@
 from django.contrib.auth import authenticate
+from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 
 import pyotp
 from rest_framework.views import APIView
@@ -6,6 +10,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError, PermissionDenied, NotFound
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.types import OpenApiTypes
 
@@ -265,3 +270,143 @@ class MFAVerifyLoginView(APIView):
             "access": str(refresh.access_token),
             "mfa_enabled": True,
         })
+
+
+class LogoutView(APIView):
+    """
+    Blacklists the supplied refresh token, invalidating it immediately.
+    POST { refresh: "<refresh_token>" }
+    """
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {"refresh": {"type": "string"}},
+                "required": ["refresh"],
+            }
+        },
+        responses={200: OpenApiTypes.OBJECT},
+        description="Logout: blacklist the refresh token so it cannot be reused.",
+    )
+    def post(self, request):
+        refresh_token = str(request.data.get("refresh", "")).strip()
+        if not refresh_token:
+            raise ValidationError({"detail": "Refresh token is required."})
+
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+        except TokenError:
+            raise ValidationError({"detail": "Token is invalid or already blacklisted."})
+
+        log_event(
+            request,
+            action="LOGOUT",
+            obj=request.user,
+            object_type="user",
+            metadata={"user_id": request.user.id},
+        )
+        return Response({"detail": "Successfully logged out."})
+
+
+class PasswordResetRequestView(APIView):
+    """
+    Generates a password reset token for the given email address.
+    POST { email } -> { uid, token }
+    In production the uid/token would be sent by email only.
+    For demo purposes they are also returned in the response body.
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {"email": {"type": "string", "format": "email"}},
+                "required": ["email"],
+            }
+        },
+        responses={200: OpenApiTypes.OBJECT},
+        description="Request a password reset token. Returns uid and token (demo mode).",
+    )
+    def post(self, request):
+        email = str(request.data.get("email", "")).strip().lower()
+        if not email:
+            raise ValidationError({"detail": "Email is required."})
+
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            # Generic message — don't reveal whether the email is registered
+            return Response({
+                "detail": "If that email is registered, a reset token has been generated.",
+            })
+
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+
+        return Response({
+            "detail": "Password reset token generated.",
+            "uid": uid,
+            "token": token,
+            "_demo_note": "In production, uid and token would be delivered by email only.",
+        })
+
+
+class PasswordResetConfirmView(APIView):
+    """
+    Validates a password reset token and sets the new password.
+    POST { uid, token, password, password2 }
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "uid":       {"type": "string"},
+                    "token":     {"type": "string"},
+                    "password":  {"type": "string"},
+                    "password2": {"type": "string"},
+                },
+                "required": ["uid", "token", "password", "password2"],
+            }
+        },
+        responses={200: OpenApiTypes.OBJECT},
+        description="Confirm password reset using uid and token from the reset request.",
+    )
+    def post(self, request):
+        uid       = str(request.data.get("uid", "")).strip()
+        token     = str(request.data.get("token", "")).strip()
+        password  = str(request.data.get("password", ""))
+        password2 = str(request.data.get("password2", ""))
+
+        if not uid or not token or not password or not password2:
+            raise ValidationError({"detail": "uid, token, password, and password2 are required."})
+
+        if password != password2:
+            raise ValidationError({"password2": "Passwords do not match."})
+
+        try:
+            user_pk = force_str(urlsafe_base64_decode(uid))
+            user = User.objects.get(pk=user_pk)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            raise ValidationError({"detail": "Invalid reset link."})
+
+        if not default_token_generator.check_token(user, token):
+            raise ValidationError({"detail": "Reset token is invalid or has expired."})
+
+        try:
+            validate_password(password, user)
+        except Exception as exc:
+            raise ValidationError({"password": list(exc.messages)})
+
+        user.set_password(password)
+        user.save()
+
+        return Response({"detail": "Password reset successfully. You can now sign in."})

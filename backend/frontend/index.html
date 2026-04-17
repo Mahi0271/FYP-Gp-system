@@ -3,70 +3,118 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>GP Secure System — Sign In</title>
+  <title>Sign in — GP Secure System</title>
+  <link rel="preconnect" href="https://rsms.me/">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div id="toast" class="toast"><span class="tag">OK</span><span class="msg"></span></div>
 
-  <div class="auth-page">
-    <div class="auth-brand">
-      <div class="dot"></div>
-      GP Secure System
-    </div>
+  <div class="auth-shell">
 
-    <div class="auth-card">
-      <div class="auth-card-header">
-        <h2>Welcome back</h2>
-        <p>Sign in to your account to continue.</p>
+    <!-- Left brand panel -->
+    <aside class="auth-side">
+      <div class="auth-side-header auth-brand-row">
+        <div class="brand-mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+        </div>
+        <span>GP Secure</span>
       </div>
 
-      <div class="auth-card-body">
+      <div class="auth-side-content">
+        <h1>Modern, secure practice management for <span>primary care</span>.</h1>
+        <p class="lede">One platform for patients, GPs, receptionists, and practice managers — with end-to-end encryption and full audit trails baked in.</p>
+
+        <div class="auth-features">
+          <div class="auth-feature">
+            <span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+            <div>Encrypted records with pgcrypto at rest</div>
+          </div>
+          <div class="auth-feature">
+            <span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+            <div>Time-based two-factor authentication</div>
+          </div>
+          <div class="auth-feature">
+            <span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+            <div>Role-based access and granular permissions</div>
+          </div>
+          <div class="auth-feature">
+            <span class="check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+            <div>Complete, immutable audit log</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="auth-side-footer">
+        <span>© GP Secure System</span>
+        <span>·</span>
+        <span>Privacy</span>
+        <span>·</span>
+        <span>Security</span>
+      </div>
+    </aside>
+
+    <!-- Right form panel -->
+    <main class="auth-main">
+      <div class="auth-main-top">
+        <button id="btnTheme" class="btn-icon theme-toggle" aria-label="Toggle theme">
+          <span class="sun-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg></span>
+          <span class="moon-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
+        </button>
+      </div>
+
+      <div class="auth-card">
+        <div>
+          <h2 id="authTitle">Welcome back</h2>
+          <p class="sub" id="authSub">Sign in to your account to continue.</p>
+        </div>
 
         <!-- Step 1: Credentials -->
         <div id="step1" class="auth-step active">
           <div class="form-group">
-            <label>Username</label>
+            <label for="username">Username</label>
             <input id="username" type="text" placeholder="Enter your username" autocomplete="username" />
           </div>
           <div class="form-group">
-            <label>Password</label>
+            <label for="password">Password</label>
             <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
           </div>
-          <button id="btnLogin" class="btn btn-full">Sign In</button>
+          <button id="btnLogin" class="btn btn-lg btn-full">Sign in</button>
         </div>
 
         <!-- Step 2: MFA -->
         <div id="step2" class="auth-step">
           <div class="info-box">
-            Two-factor authentication is enabled on this account.
-            Open your authenticator app and enter the 6-digit code.
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <div>Two-factor authentication is enabled on this account. Open your authenticator app and enter the 6-digit code.</div>
           </div>
           <div class="form-group">
-            <label>Authentication Code</label>
+            <label for="mfaCode">Authentication Code</label>
             <input id="mfaCode" type="text" inputmode="numeric" maxlength="6"
-                   placeholder="000000" autocomplete="one-time-code" />
+                   placeholder="000000" autocomplete="one-time-code"
+                   style="font-size:20px;letter-spacing:.24em;text-align:center;font-family:'JetBrains Mono',monospace;" />
           </div>
-          <button id="btnMfaVerify" class="btn btn-full">Verify &amp; Sign In</button>
+          <button id="btnMfaVerify" class="btn btn-lg btn-full">Verify &amp; sign in</button>
           <button id="btnMfaBack" class="btn btn-ghost btn-full">← Back</button>
         </div>
 
+        <div class="auth-card-footer">
+          <div>New patient? <a href="signup.html">Register here →</a></div>
+          <div><a href="forgot-password.html">Forgot your password?</a></div>
+        </div>
       </div>
-
-      <div class="auth-card-footer">
-        New patient? <a href="signup.html">Register here →</a>
-      </div>
-    </div>
+    </main>
   </div>
 
   <script src="api.js"></script>
   <script src="common.js"></script>
   <script>
-    // Temp storage for MFA step (JS vars only, never localStorage)
     let _pendingUsername = "";
     let _pendingPassword = "";
 
-    // If already logged in, redirect
+    $("btnTheme").onclick = toggleTheme;
+
     (async () => {
       if (getToken()) {
         try {
@@ -81,9 +129,15 @@
     function showStep(n) {
       $("step1").classList.toggle("active", n === 1);
       $("step2").classList.toggle("active", n === 2);
+      if (n === 2) {
+        $("authTitle").textContent = "Two-factor auth";
+        $("authSub").textContent   = "Enter the code from your authenticator app.";
+      } else {
+        $("authTitle").textContent = "Welcome back";
+        $("authSub").textContent   = "Sign in to your account to continue.";
+      }
     }
 
-    // Step 1: username + password
     $("btnLogin").onclick = async () => {
       const username = $("username").value.trim();
       const password = $("password").value;
@@ -94,11 +148,10 @@
       try {
         $("btnLogin").disabled = true;
         const tok = await apiFetch("/api/token/", { method: "POST", body: { username, password } });
-        setToken(tok.access);
+        setToken(tok.access, tok.refresh);
         const me = await fetchMe();
 
         if (me.mfa_enabled) {
-          // Don't keep the token yet — user must complete MFA
           clearToken();
           _pendingUsername = username;
           _pendingPassword = password;
@@ -115,12 +168,10 @@
       }
     };
 
-    // Allow Enter key on password field
     $("password").addEventListener("keydown", e => {
       if (e.key === "Enter") $("btnLogin").click();
     });
 
-    // Step 2: TOTP code
     $("btnMfaVerify").onclick = async () => {
       const code = $("mfaCode").value.trim();
       if (!code || code.length < 6) {
@@ -133,7 +184,7 @@
           method: "POST",
           body: { username: _pendingUsername, password: _pendingPassword, code }
         });
-        setToken(tok.access);
+        setToken(tok.access, tok.refresh);
         const me = await fetchMe();
         showToast("Signed in successfully.", "ok");
         setTimeout(() => go(roleHome(me.role)), 600);
