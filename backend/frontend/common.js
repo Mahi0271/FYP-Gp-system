@@ -1,8 +1,37 @@
 /* =============================================
-   GP Secure System — Shared Utilities
+   GP Secure System — Shared Utilities  (common.js)
+
+   This file is loaded on every dashboard page alongside api.js.
+   It provides reusable building blocks so each role-specific page
+   (patient.html, gp.html, etc.) doesn't have to re-implement these:
+
+     ICONS          — SVG icon strings, referenced by name
+     icon()         — helper to embed an SVG by name, with optional size
+     initTheme()    — reads the user's saved theme preference and applies it
+     toggleTheme()  — switches between dark/light and persists the choice
+     showToast()    — displays a temporary success/error notification banner
+     fmtDate/Only/Time() — human-readable date/time formatting
+     todayISO()     — today's date as a YYYY-MM-DD string
+     escapeHtml()   — sanitises any user-provided text before putting it in innerHTML
+     badgeHtml()    — coloured badge chip for appointment status values
+     entryTypeBadge() — coloured badge chip for clinical entry types
+     roleBadge()    — coloured badge chip for user roles
+     initNav()      — wires up sidebar navigation links
+     showSection()  — shows one content section and hides the rest
+     openModal() / closeModal() / initModalClose() — modal dialog helpers
+     mountShell()   — wires up the theme toggle and hamburger menu button
+     emptyState()   — renders a friendly "nothing here yet" placeholder
+     renderAppointmentsTable() — builds an HTML table from a list of appointments
+     renderEntryCards()        — builds a card list from clinical entries
+     renderAuditTable()        — builds an HTML table from audit log entries
+     loadMfaSection()          — refreshes the MFA status panel
+     setupMfa()                — wires up all the MFA toggle buttons
    ============================================= */
 
-/* ---- Icon library (Lucide-inspired SVG paths) ---- */
+/* ---- Icon library (Lucide-inspired inline SVG paths) ----
+   Keeping icons inline (rather than loading a font or sprite sheet) means
+   the page works without any extra network requests and icons scale cleanly.
+*/
 const ICONS = {
   dashboard:  '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>',
   calendar:   '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
@@ -37,6 +66,7 @@ const ICONS = {
   bell:       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>',
 };
 
+// Look up an icon by name and optionally override its width/height in pixels
 function icon(name, sizePx) {
   const svg = ICONS[name] || "";
   if (!sizePx) return svg;
@@ -45,6 +75,10 @@ function icon(name, sizePx) {
 
 /* =============================================
    Theme handling
+   Reads/writes a 'theme' key in localStorage ('dark' or 'light').
+   Falls back to the OS preference via prefers-color-scheme, then dark.
+   The chosen theme is applied as data-theme on <html> so CSS variables
+   can switch palettes without any JavaScript in the CSS itself.
    ============================================= */
 function initTheme() {
   const stored = localStorage.getItem("theme");
@@ -56,12 +90,15 @@ function toggleTheme() {
   const current = document.documentElement.getAttribute("data-theme") || "dark";
   const next = current === "dark" ? "light" : "dark";
   document.documentElement.setAttribute("data-theme", next);
-  localStorage.setItem("theme", next);
+  localStorage.setItem("theme", next);  // remember preference for next visit
 }
-initTheme();
+initTheme();  // apply theme immediately on script load (before DOMContentLoaded)
 
 /* =============================================
-   Toast
+   Toast notifications
+   A toast is a small banner that slides in at the bottom of the screen
+   to confirm an action or report an error, then disappears after ~3.6s.
+   kind values: "ok" (green success), "err" (red error), anything else → "Notice"
    ============================================= */
 let _toastTimer = null;
 function showToast(message, kind = "ok") {
@@ -72,6 +109,7 @@ function showToast(message, kind = "ok") {
   const msgEl = t.querySelector(".msg");
   if (tagEl) tagEl.textContent = kind === "ok" ? "Success" : kind === "err" ? "Error" : "Notice";
   if (msgEl) msgEl.textContent = message;
+  // Cancel any previous timer so rapid calls don't overlap
   if (_toastTimer) clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => { t.classList.remove("show"); }, 3600);
 }
@@ -106,7 +144,11 @@ function todayISO() {
 }
 
 /* =============================================
-   Security
+   Security — XSS prevention
+   Any text that comes from the API or user input MUST be passed through
+   escapeHtml() before being inserted into innerHTML.  This neutralises
+   HTML special characters so a malicious value like <script>alert(1)</script>
+   is displayed as literal text rather than executed.
    ============================================= */
 function escapeHtml(str) {
   return String(str ?? "")
@@ -137,7 +179,10 @@ function roleBadge(role) {
 }
 
 /* =============================================
-   Navigation (section switching with topbar title sync)
+   Navigation — section switching
+   Each dashboard page is a single HTML file with multiple <div class="section">
+   elements.  initNav() and showSection() handle switching between them without
+   a full page reload, and keep the topbar title in sync with the active section.
    ============================================= */
 const SECTION_TITLES = {
   dashboard:   { title: "Overview",        sub: "A summary of your activity." },
@@ -179,7 +224,13 @@ function showSection(name) {
 }
 
 /* =============================================
-   Modal helpers
+   Modal dialog helpers
+   Modals use a full-screen overlay div with class "modal-overlay".
+   Adding the "open" class makes the overlay and its content visible (via CSS).
+   initModalClose() wires up three ways to dismiss a modal:
+     1. Click the overlay backdrop (outside the dialog box)
+     2. Click any element with class "modal-close" inside the modal
+     3. Press the Escape key (handled globally below)
    ============================================= */
 function openModal(id) {
   const el = document.getElementById(id);
@@ -192,15 +243,17 @@ function closeModal(id) {
 function initModalClose(modalId) {
   const overlay = document.getElementById(modalId);
   if (!overlay) return;
+  // Clicking the dark backdrop (not the dialog itself) should close it
   overlay.addEventListener("click", e => {
     if (e.target === overlay) closeModal(modalId);
   });
+  // Any button with class "modal-close" inside this modal should close it
   overlay.querySelectorAll(".modal-close").forEach(btn => {
     btn.addEventListener("click", () => closeModal(modalId));
   });
 }
 
-// Global Esc key closes any open modal
+// Press Escape to dismiss whichever modal is currently open
 document.addEventListener("keydown", e => {
   if (e.key === "Escape") {
     document.querySelectorAll(".modal-overlay.open").forEach(m => m.classList.remove("open"));
@@ -208,7 +261,11 @@ document.addEventListener("keydown", e => {
 });
 
 /* =============================================
-   App shell wire-up (theme toggle, sidebar toggle)
+   App shell wire-up
+   Called by mountSidebar() in api.js after the sidebar is populated.
+   Connects the theme toggle button and the hamburger menu button.
+   On mobile (<= 900px) the menu button slides the sidebar in/out.
+   On desktop it collapses the sidebar to a narrow icon-only strip.
    ============================================= */
 function mountShell() {
   const themeBtn = $("btnTheme");
@@ -218,14 +275,17 @@ function mountShell() {
   if (menuBtn) {
     menuBtn.onclick = () => {
       const app = document.querySelector(".app");
-      if (window.innerWidth <= 900) app?.classList.toggle("sidebar-open");
-      else app?.classList.toggle("sidebar-collapsed");
+      // Different behaviour at different screen widths
+      if (window.innerWidth <= 900) app?.classList.toggle("sidebar-open");      // slide in on mobile
+      else app?.classList.toggle("sidebar-collapsed");                           // collapse on desktop
     };
   }
 }
 
 /* =============================================
-   Empty state helper
+   Empty state placeholder
+   When a list (appointments, entries, audit logs) has no items to show,
+   render a friendly message with an icon instead of leaving the area blank.
    ============================================= */
 function emptyState(iconName, title, subtitle) {
   return `
@@ -237,7 +297,13 @@ function emptyState(iconName, title, subtitle) {
 }
 
 /* =============================================
-   Appointments table
+   Appointments table renderer
+   Builds and injects an HTML table into the element with the given containerId.
+   Options let callers control which columns appear:
+     showPatient  → show a "Patient" column (useful for GP and staff views)
+     showGp       → show a "GP" column (useful for patient and staff views)
+     actions      → a function(appointment) → HTML string for the actions column
+     compact      → skip the horizontal scroll wrapper for narrow tables
    ============================================= */
 function renderAppointmentsTable(containerId, appts, { showPatient = false, showGp = false, actions = null, compact = false } = {}) {
   const el = $(containerId);
@@ -281,7 +347,10 @@ function renderAppointmentsTable(containerId, appts, { showPatient = false, show
 }
 
 /* =============================================
-   Clinical entries list
+   Clinical entries card list renderer
+   Renders a list of clinical entry cards (notes, diagnoses, prescriptions)
+   into the element with the given containerId.  Each card shows the entry
+   type badge, title, content, author, and creation date.
    ============================================= */
 function renderEntryCards(containerId, entries) {
   const el = $(containerId);
@@ -306,7 +375,9 @@ function renderEntryCards(containerId, entries) {
 }
 
 /* =============================================
-   Audit log table
+   Audit log table renderer
+   Builds and injects an HTML table of audit log entries into containerId.
+   Columns: Timestamp, User (with role badge), Action (highlighted), Object, Metadata, IP.
    ============================================= */
 function renderAuditTable(containerId, logs) {
   const el = $(containerId);
@@ -344,7 +415,14 @@ function renderAuditTable(containerId, logs) {
 }
 
 /* =============================================
-   MFA shared logic
+   MFA (Multi-Factor Authentication) UI logic
+   Shared by all role dashboards — every user can enable/disable MFA
+   from their Account section.
+
+   loadMfaSection() — refreshes the current MFA status and toggles
+                      which panel is shown (setup vs. disable).
+   setupMfa()       — wires all the buttons: generate QR, copy secret,
+                      confirm enable code, confirm disable code.
    ============================================= */
 async function loadMfaSection(statusId, setupAreaId, disableAreaId) {
   try {

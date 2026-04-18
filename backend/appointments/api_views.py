@@ -1,3 +1,14 @@
+"""
+API views for listing, creating, and updating appointments.
+
+Access rules enforced here:
+  - Patients see only their own appointments.
+  - GPs see only appointments where they are the assigned doctor.
+  - Receptionists and Practice Managers see all appointments.
+
+Both views write to the audit log on create/update so there is a permanent
+record of who changed what and when.
+"""
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -10,6 +21,16 @@ from .serializers import AppointmentSerializer
 
 
 class AppointmentListCreateView(generics.ListCreateAPIView):
+    """
+    GET  → returns a list of appointments visible to the current user.
+    POST → creates a new appointment.
+
+    Supported query parameters for filtering:
+      upcoming=1         → only future appointments
+      date_from=YYYY-MM-DD / date_to=YYYY-MM-DD → date range
+      patient=<id>       → staff-only filter by patient
+      gp=<id>            → staff-only filter by GP
+    """
     serializer_class = AppointmentSerializer
     permission_classes = [IsAuthenticated]
 
@@ -100,6 +121,17 @@ class AppointmentListCreateView(generics.ListCreateAPIView):
 
 
 class AppointmentDetailView(generics.RetrieveUpdateAPIView):
+    """
+    GET   → view a single appointment (if you're allowed to see it).
+    PATCH → update a single appointment's status or details.
+
+    Permission check in get_object() ensures users can only see appointments
+    they are directly involved in (unless they're staff).
+
+    Before passing data to the serializer on PATCH, we strip 'patient' and 'gp'
+    from the request body for non-staff users — this prevents a patient from
+    reassigning their appointment to a different GP by sending a crafted request.
+    """
     serializer_class = AppointmentSerializer
     queryset = Appointment.objects.all()
     permission_classes = [IsAuthenticated]
@@ -108,12 +140,15 @@ class AppointmentDetailView(generics.RetrieveUpdateAPIView):
         obj = super().get_object()
         u = self.request.user
 
+        # Staff (receptionist, manager) can view any appointment
         if u.is_superuser or u.role in ["RECEPTIONIST", "PRACTICE_MANAGER"]:
             return obj
 
+        # A GP can only see appointments assigned to them
         if u.role == "GP" and obj.gp_id == u.id:
             return obj
 
+        # A patient can only see their own appointments
         if u.role == "PATIENT" and obj.patient_id == u.id:
             return obj
 
@@ -122,7 +157,9 @@ class AppointmentDetailView(generics.RetrieveUpdateAPIView):
     def update(self, request, *args, **kwargs):
         u = request.user
 
-        # Strip patient/gp before serializer validation so invalid PKs don't cause 400s.
+        # Patients and GPs cannot change who the appointment belongs to.
+        # Strip those fields out before the serializer sees them to avoid 400 errors
+        # from the PrimaryKeyRelatedField validation when those IDs don't belong to the user.
         if u.role in ["PATIENT", "GP"]:
             data = request.data.copy()
             data.pop("patient", None)
@@ -131,6 +168,7 @@ class AppointmentDetailView(generics.RetrieveUpdateAPIView):
 
         response = super().update(request, *args, **kwargs)
 
+        # Log the change only on success
         if response.status_code in (200, 201):
             appt = self.get_object()
             log_event(

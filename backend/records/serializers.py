@@ -1,3 +1,21 @@
+"""
+Serializers for medical records and clinical entries.
+
+Key design decisions:
+  - MedicalRecordSerializer is read-only (no create/update in the API).
+  - ClinicalEntrySerializer handles the encrypt/decrypt cycle for content:
+      * On write (create/update): takes plaintext from the request, calls
+        PostgreSQL's pgp_sym_encrypt() via a raw UPDATE query, and clears
+        the plaintext 'content' column to ''.
+      * On read: the view annotates the queryset with pgp_sym_decrypt() as
+        'content_plain', and to_representation() surfaces it as 'content'.
+  - Role-based write rules are enforced in validate():
+      * Patients → read-only (ValidationError on any create/update attempt)
+      * Staff (Receptionist, Manager) → no access
+      * GPs → can only write for their own assigned patients
+
+gp_is_assigned_to_patient() is a shared helper imported by api_views.py too.
+"""
 from rest_framework import serializers
 from accounts.models import User
 from .models import MedicalRecord, ClinicalEntry
@@ -6,6 +24,12 @@ from django.db import connection
 
 
 def gp_is_assigned_to_patient(gp_user: User, patient_user: User) -> bool:
+    """
+    Check whether a GP user is assigned to a specific patient.
+
+    Returns False on any exception (missing profile, None assigned_gp, etc.)
+    so callers can treat it as a simple boolean without try/except blocks.
+    """
     try:
         return (
             gp_user.role == User.Role.GP

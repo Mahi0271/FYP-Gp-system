@@ -1,3 +1,10 @@
+"""
+API view for browsing the system audit log.
+
+Only practice managers (and superusers) can access this endpoint.
+The list can be filtered by date range, user, action type, and object type
+to make it easy to investigate specific events or time periods.
+"""
 from django.utils.dateparse import parse_date
 from rest_framework import generics
 from rest_framework.exceptions import PermissionDenied, ValidationError

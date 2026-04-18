@@ -1,3 +1,20 @@
+"""
+API views for medical records and clinical entries.
+
+All queryset fetches for ClinicalEntry include a RawSQL annotation that
+calls PostgreSQL's pgp_sym_decrypt() to decrypt the content on the
+database side.  The decrypted text comes back as 'content_plain' and the
+serializer then exposes it as 'content' in the API response.
+
+Access rules (can_read_record helper):
+  - Unauthenticated users → denied
+  - Superuser → full access
+  - PATIENT → can only read their own record
+  - GP → can only read records of their assigned patients
+  - RECEPTIONIST / PRACTICE_MANAGER → denied (they use other endpoints)
+
+Write rules are enforced in the serializer's validate() method.
+"""
 from django.conf import settings
 from django.db.models.expressions import RawSQL
 from rest_framework import generics
@@ -10,15 +27,21 @@ from .serializers import MedicalRecordSerializer, ClinicalEntrySerializer, gp_is
 
 
 def can_read_record(user: User, record: MedicalRecord) -> bool:
+    """
+    Return True if this user is allowed to view the given medical record.
+
+    Centralised here so the same rule is applied consistently across
+    MedicalRecordDetailView, RecordEntriesListCreateView, and ClinicalEntryDetailView.
+    """
     if not user.is_authenticated:
         return False
     if user.is_superuser:
         return True
     if user.role == User.Role.PATIENT:
-        return record.patient_id == user.id
+        return record.patient_id == user.id  # patients can only see their own record
     if user.role == User.Role.GP:
-        return gp_is_assigned_to_patient(user, record.patient)
-    return False  # receptionist/manager denied
+        return gp_is_assigned_to_patient(user, record.patient)  # GPs can only see their assigned patients
+    return False  # receptionists and managers are deliberately excluded from records
 
 
 class MedicalRecordListView(generics.ListAPIView):

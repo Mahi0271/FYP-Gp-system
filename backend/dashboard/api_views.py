@@ -1,3 +1,16 @@
+"""
+Dashboard API view — aggregated metrics for the practice manager.
+
+Returns a single JSON payload summarising activity across all parts of
+the system for a given date range (defaulting to the last 7 days):
+
+  appointments  → total, breakdown by status, upcoming count
+  records       → total number of medical records
+  entries       → new clinical entries written in the date range
+  audits        → total audit events + the 5 most frequent action types
+
+Only practice managers and superusers can access this endpoint.
+"""
 from datetime import datetime, time
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -16,10 +29,15 @@ from audits.models import AuditLog
 
 
 def _day_start(d):
+    """Convert a date to a timezone-aware datetime at midnight (start of day)."""
     return timezone.make_aware(datetime.combine(d, time.min))
 
+
 def _day_end_exclusive(d):
-    # end-exclusive upper bound: next day 00:00
+    """
+    Return the start of the *next* day so date-range filters are end-exclusive.
+    e.g. date_to=2024-01-07 → end at 2024-01-08 00:00 to include all of the 7th.
+    """
     return timezone.make_aware(datetime.combine(d, time.min)) + timezone.timedelta(days=1)
 
 

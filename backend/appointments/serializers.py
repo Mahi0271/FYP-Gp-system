@@ -1,3 +1,17 @@
+"""
+Serializer for the Appointment model.
+
+This serializer does a lot of heavy lifting beyond simple field mapping:
+  - Role-based field rules: patients can only touch 'status', GPs can only touch 'status'
+  - Time validation: end must be after start, booking in the past is rejected
+  - Status transition rules: patients cancel, GPs complete, staff confirm/cancel
+  - GP overlap check: prevents double-booking a GP for the same time slot
+  - GP auto-inference: when a patient creates an appointment without specifying
+    a GP, their assigned GP is filled in automatically
+
+All of these rules live in the validate() method so they're enforced on
+both POST (create) and PATCH (update) requests.
+"""
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -7,6 +21,8 @@ User = get_user_model()
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
+    # Restrict patient/gp fields to users with the right role
+    # 'required=False' because staff don't always need to supply both when patching
     patient = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.filter(role="PATIENT"),
         required=False,
@@ -24,7 +40,9 @@ class AppointmentSerializer(serializers.ModelSerializer):
             "start_time", "end_time",
             "status", "reason", "created_at",
         ]
-        read_only_fields = ["id", "created_at"]  # NOTE: don't make patient/gp read-only globally
+        # id and created_at are auto-set by the DB — never allow them in input
+        # patient/gp are intentionally NOT read-only here so staff can set them
+        read_only_fields = ["id", "created_at"]
 
     def _get_patient_assigned_gp_user(self, user):
         """

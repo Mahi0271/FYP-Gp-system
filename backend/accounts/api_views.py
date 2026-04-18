@@ -1,3 +1,20 @@
+"""
+API views for accounts — authentication, MFA, and user management.
+
+Views defined here:
+  MeView                         → Who am I? Returns the current user's profile.
+  PatientSignupView              → Public registration endpoint for new patients.
+  ReceptionistUpdatePatientContactView → Receptionist updates a patient's details.
+  MFASetupView                   → Generates a new TOTP secret + QR URL.
+  MFAEnableView                  → Confirms and activates MFA after first scan.
+  MFADisableView                 → Turns MFA off (requires a valid code).
+  MFAVerifyLoginView             → Login for MFA users: credentials + TOTP code → JWT.
+  LogoutView                     → Blacklists the refresh token (server-side logout).
+  PasswordResetRequestView       → Step 1 of password reset: generates a one-time token.
+  PasswordResetConfirmView       → Step 2: validates the token and sets the new password.
+
+All views that modify sensitive data write an entry to the audit log via log_event().
+"""
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
@@ -20,6 +37,13 @@ from .serializers import PatientContactUpdateSerializer, PatientRegisterSerializ
 
 
 class MeView(APIView):
+    """
+    Returns basic information about the currently logged-in user.
+
+    The frontend calls this on every page load to confirm the JWT is still
+    valid and to find out the user's role (which determines which dashboard
+    they see).  Patients also get their assigned GP's user ID here.
+    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -30,6 +54,8 @@ class MeView(APIView):
             "role": getattr(u, "role", None),
             "mfa_enabled": bool(getattr(u, "mfa_enabled", False)),
         }
+        # Patients need to know which GP they're assigned to so the frontend
+        # can pre-fill the GP field when booking appointments
         if u.role == User.Role.PATIENT:
             profile = getattr(u, "patient_profile", None)
             gp = getattr(profile, "assigned_gp", None)

@@ -1,3 +1,24 @@
+# Docker Compose configuration for the GP Secure System.
+#
+# Run the whole stack with:  docker compose up
+# The app will be available at http://localhost:8000/
+#
+# Two containers are started:
+#
+#   db  — PostgreSQL 16 database
+#         * The db/init/ folder is mounted as the init scripts directory.
+#           Any .sql files there run automatically on first start.
+#         * Database files are persisted in ./db_data so data survives restarts.
+#         * A health check polls pg_isready so the web container waits until
+#           the database is actually accepting connections before starting.
+#
+#   web — Django application server
+#         * Built from backend/Dockerfile.
+#         * Reads environment variables (secrets, DB connection) from .env.
+#         * On startup, runs migrations then starts the Django dev server.
+#         * The backend/ source folder is mounted as a volume so code changes
+#           are reflected immediately without rebuilding the image.
+
 services:
   db:
     image: postgres:16
@@ -9,8 +30,8 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./db_data:/var/lib/postgresql/data
-      - ./db/init:/docker-entrypoint-initdb.d
+      - ./db_data:/var/lib/postgresql/data        # persist database files between restarts
+      - ./db/init:/docker-entrypoint-initdb.d      # run SQL init scripts on first start
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U gpuser -d gpdb"]
       interval: 5s
@@ -20,16 +41,17 @@ services:
   web:
     build: ./backend
     container_name: gp_web
+    # Run migrations first, then start the dev server
     command: "sh -c 'python manage.py migrate && echo && echo \"OPEN IN BROWSER: http://localhost:8000/\" && echo && python manage.py runserver 0.0.0.0:8000'"
     env_file:
-      - .env
+      - .env                   # loads DJANGO_SECRET_KEY, PGCRYPTO_KEY, DB settings, etc.
     volumes:
-      - ./backend:/app
+      - ./backend:/app         # live-reload: source changes apply without rebuild
     ports:
       - "8000:8000"
     depends_on:
       db:
-        condition: service_healthy
+        condition: service_healthy  # wait for PostgreSQL to be ready before starting Django
 
 volumes:
   gp_pgdata:

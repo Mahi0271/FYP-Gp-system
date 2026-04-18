@@ -1,5 +1,18 @@
-# backend/appointments/availability.py
+"""
+GP availability calculator for the appointment booking flow.
 
+When a patient or receptionist wants to book an appointment they need to
+know which time slots are still free for a given GP on a given day.
+
+This view:
+  1. Divides the working day (09:00–17:00 UTC) into 15-minute slots.
+  2. Fetches all non-cancelled appointments the GP already has that day.
+  3. Removes any slot that overlaps one of those existing appointments.
+  4. Returns the remaining free slots as a list of {start_time, end_time} pairs.
+
+GPs may only query their own availability — they cannot look up another GP's
+calendar.  Patients and staff can query any GP.
+"""
 from datetime import datetime, time, timedelta, timezone as dt_timezone
 from django.contrib.auth import get_user_model
 from rest_framework.views import APIView
@@ -18,14 +31,14 @@ class AvailabilityView(APIView):
     """
     GET /api/appointments/availability/?date=YYYY-MM-DD&gp=<gp_id>
 
-    Returns available 15-min slots between 09:00–17:00 UTC (exclusive end).
-    Removes any slot that overlaps existing appointments for that GP.
+    Returns available 15-minute slots between 09:00–17:00 UTC.
+    Any slot that overlaps a non-cancelled appointment is excluded.
     """
     permission_classes = [IsAuthenticated]
 
-    SLOT_MINUTES = 15
-    DAY_START_HOUR = 9
-    DAY_END_HOUR = 17
+    SLOT_MINUTES = 15   # each bookable block is 15 minutes long
+    DAY_START_HOUR = 9  # working day starts at 09:00 UTC
+    DAY_END_HOUR = 17   # working day ends at 17:00 UTC
 
     @extend_schema(
         parameters=[
