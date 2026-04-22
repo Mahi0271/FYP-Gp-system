@@ -142,6 +142,44 @@ cd backend
 python manage.py runserver
 ```
 
+## ⚠️ Creating an Admin Account (REQUIRED)
+
+**This step is crucial.** Without an admin account, you will not be able to create GP doctors, receptionists, or practice managers. Patient accounts can self-register, but all staff accounts must be created through the Django admin panel.
+
+### Steps
+
+1. **Ensure the containers are running**:
+   ```bash
+   docker compose up -d
+   ```
+
+2. **Open a shell inside the running web container**:
+   ```bash
+   docker exec -it gp_web bash
+   ```
+
+3. **Create the superuser**:
+   ```bash
+   python manage.py createsuperuser
+   ```
+   Follow the prompts to set a username, email, and password.
+
+4. **Exit the container shell**:
+   ```bash
+   exit
+   ```
+
+5. **Log in to the admin panel** at `http://localhost:8000/admin/` using the credentials you just created.
+
+6. **From the admin panel you can**:
+   - Create GP doctor accounts (set role to `gp`)
+   - Create receptionist accounts (set role to `receptionist`)
+   - Create practice manager accounts (set role to `manager`)
+
+> Without completing this step, the system will have no staff accounts and core functionality will be inaccessible.
+
+---
+
 ## Available URLs
 
 | URL | Purpose |
